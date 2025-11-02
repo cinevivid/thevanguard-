@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { View } from '../types';
 
@@ -48,6 +49,7 @@ const analysisItems = [
 const preproductionItems = [
   { view: View.SCRIPT_BREAKDOWN, icon: <WandIcon />, label: View.SCRIPT_BREAKDOWN },
   { view: View.LOOK_DEV_LAB, icon: <BrushIcon />, label: View.LOOK_DEV_LAB },
+  { view: View.AI_CASTING_STUDIO, icon: <UserCheckIcon />, label: View.AI_CASTING_STUDIO },
   { view: View.CORPUS_ASSISTANT, icon: <MessageSquareIcon />, label: View.CORPUS_ASSISTANT },
 ];
 

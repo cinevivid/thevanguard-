@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -22,6 +23,7 @@ import ColorVFXHub from './components/ColorVFXHub';
 import ProductionOffice from './components/ProductionOffice';
 import AssetLibrary from './components/AssetLibrary';
 import TrailerGenerator from './components/TrailerGenerator';
+import AICastingStudio from './components/AICastingStudio';
 
 
 import { View, Shot, TimelineTrack } from './types';
@@ -117,6 +119,8 @@ const App: React.FC = () => {
         return <ScriptBreakdown />;
       case View.LOOK_DEV_LAB:
         return <LookDevLab />;
+      case View.AI_CASTING_STUDIO:
+        return <AICastingStudio />;
       case View.CORPUS_ASSISTANT:
         return <CorpusAssistant />;
       case View.CANONICAL_ASSETS:

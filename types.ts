@@ -11,6 +11,8 @@ export enum View {
   SHOT_DATABASE = 'Shot Database',
   SCRIPT_BREAKDOWN = 'AI Script Breakdown',
   LOOK_DEV_LAB = 'Look Dev Lab',
+  // FIX: Added missing AI_CASTING_STUDIO to View enum.
+  AI_CASTING_STUDIO = 'AI Casting Studio',
   CORPUS_ASSISTANT = 'Corpus Assistant',
   CANONICAL_ASSETS = 'Canonical Assets',
   STORYBOARD_GENERATOR = 'Storyboard Generator',

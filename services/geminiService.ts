@@ -41,6 +41,42 @@ export const generateCharacterImages = async (prompt: string, aspectRatio: '1:1'
   }
 };
 
+export const generateCharacterConcepts = async (description: string): Promise<string[]> => {
+  const ai = getAiClient();
+  const fullPrompt = `Generate a cinematic headshot for a film character. The image should be a professional actor-style portrait with dramatic lighting. The background should be neutral (gray or black). The character is described as: "${description}".
+
+Style: cinematic portrait, dramatic lighting, headshot, professional photography, anamorphic lens flare.
+`;
+  
+  const contents = { parts: [{ text: fullPrompt }] };
+
+  const generateSingleImage = async () => {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: contents,
+      config: {
+        responseModalities: [Modality.IMAGE],
+      },
+    });
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return part.inlineData.data;
+      }
+    }
+    throw new Error("No image data found in response");
+  };
+
+  try {
+    const imagePromises = Array(4).fill(0).map(() => generateSingleImage());
+    const images = await Promise.all(imagePromises);
+    return images.filter((img): img is string => !!img);
+  } catch (error) {
+    console.error("Error generating character concepts:", error);
+    return [];
+  }
+};
+
+
 export const generateStoryboardImages = async (prompt: string, characterRefs: { name: string, imageBase64: string }[]): Promise<string[]> => {
   const ai = getAiClient();
   const referenceInstructions = characterRefs.map((ref, index) => 
