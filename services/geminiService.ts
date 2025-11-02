@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality, Part } from "@google/genai";
 import { screenplay } from '../data/screenplay';
 import { visualLookbook } from '../data/visualLookbook';
@@ -435,11 +436,11 @@ export async function* getColorBibleAnalysis(scene: string): AsyncGenerator<stri
     }
 }
 
-export async function* generateMusicIdeas(prompt: string): AsyncGenerator<string> {
+export async function* generateMusicIdeas(musicPrompt: string): AsyncGenerator<string> {
     const ai = getAiClient();
     const fullPrompt = `You are an AI Music Composer. Based on the following prompt, generate a brief description of a musical score. Include instrumentation, tempo, mood, and reference composers.
     
-    **Prompt:** "${prompt}"
+    **Prompt:** "${musicPrompt}"
     ---
     `;
 
@@ -545,7 +546,7 @@ export async function* generateAssetTags(shot: Shot, imageBase64: string): Async
             contents,
         });
         const text = response.text;
-        const tags = JSON.parse(text.trim().replace(/```json|```/g, ''));
+        const tags = JSON.parse(text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, ''));
         yield tags;
     } catch (error) {
         console.error("Error generating asset tags:", error);
@@ -613,6 +614,7 @@ export async function* generateTrailerCutlist(): AsyncGenerator<string> {
   }
 }
 
+// FIX: Export 'runProductionAudit' to make it available for import in other components.
 export async function* runProductionAudit(shots: Shot[]): AsyncGenerator<string> {
   const ai = getAiClient();
   const prompt = `You are an AI Executive Producer. Analyze the entire shot database for "THE VANGUARD" and provide a high-level audit report.
@@ -663,7 +665,7 @@ export const getEmotionalArcData = async (character: string): Promise<EmotionalA
   
   try {
     const response = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
-    const text = response.text.trim().replace(/```json|```/g, '');
+    const text = response.text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, '');
     return JSON.parse(text);
   } catch (error) {
     console.error("Error fetching emotional arc data:", error);
@@ -692,7 +694,7 @@ export const getPacingData = async (): Promise<PacingPoint[]> => {
   `;
   try {
     const response = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
-    const text = response.text.trim().replace(/```json|```/g, '');
+    const text = response.text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, '');
     return JSON.parse(text);
   } catch (error) {
     console.error("Error fetching pacing data:", error);
@@ -700,6 +702,7 @@ export const getPacingData = async (): Promise<PacingPoint[]> => {
   }
 };
 
+// FIX: Export 'analyzeShotComposition' to make it available for import in other components.
 export async function* analyzeShotComposition(shot: Shot, imageBase64: string): AsyncGenerator<string> {
     const ai = getAiClient();
     const prompt = `You are an expert Director of Photography like Roger Deakins. Your task is to analyze a generated storyboard image for the film "THE VANGUARD" based on the project's official documentation.

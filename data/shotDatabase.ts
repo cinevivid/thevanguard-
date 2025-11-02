@@ -29,7 +29,7 @@ function parseShotlist(): Shot[] {
                 shotNumber: `${sceneNum}-${shotLetter}`,
                 description: parts[3],
                 status: 'Not Started',
-                complexity: parts[5].includes('EASY') ? 'EASY' : parts[5].includes('MEDIUM') ? 'MEDIUM' : 'HARD',
+                complexity: parts[5].includes('EASY') ? 'EASY' : (parts[5].includes('MEDIUM') ? 'MEDIUM' : 'HARD'),
                 characters: [], // Placeholder, could be parsed from description
                 location: '', // Placeholder, would need scene-level data
                 tags: [],
@@ -44,6 +44,13 @@ function parseShotlist(): Shot[] {
                 // Placeholder cinematography
                 cameraAngle: 'Medium',
                 lensType: '35mm',
+                shotType: 'storyboard',
+                cameraMovement: 'static',
+                lightingSetup: 'standard',
+                audioNotes: '',
+                complexityScore: 5,
+                estimatedCost: 0,
+                notes: '',
             };
             shots.push(shot);
         } catch (e) {
