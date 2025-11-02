@@ -41,7 +41,10 @@ const StoryboardGenerator: React.FC<StoryboardGeneratorProps> = ({ shots, setSho
     setSelectedShotId(shot.id);
     setGeneratedImages([]);
     setError(null);
-    setPrompt(shot.prompt || shot.description);
+    // FIX: The 'Shot' type has a 'prompts' array, not a singular 'prompt' property.
+    // This now finds the storyboard-specific prompt or falls back to the shot description.
+    const storyboardPrompt = shot.prompts.find(p => p.type === 'midjourney_storyboard')?.prompt;
+    setPrompt(storyboardPrompt || shot.description);
     setQcResults({});
   }, []);
   

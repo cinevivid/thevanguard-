@@ -3,10 +3,13 @@ import { screenplay } from '../data/screenplay';
 import { visualLookbook } from '../data/visualLookbook';
 import { productionCalendar } from '../data/productionCalendar';
 import { consistencyFormula } from '../data/consistencyFormula';
-import { Shot } from "../types";
+import { Shot, EmotionalArcPoint, PacingPoint } from "../types";
+import { pitchDeck } from "../data/pitchDeck";
+import { shotDatabase as allShots } from "../data/shotDatabase";
 
-// Assume process.env.API_KEY is available
 const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
+// ... (existing functions: generateCharacterImages, generateCharacterConcepts, etc.)
 
 export const generateCharacterImages = async (prompt: string, aspectRatio: '1:1' | '16:9'): Promise<string[]> => {
   const ai = getAiClient();
@@ -31,7 +34,6 @@ export const generateCharacterImages = async (prompt: string, aspectRatio: '1:1'
   };
 
   try {
-    // Generate 4 images in parallel
     const imagePromises = Array(4).fill(0).map(() => generateSingleImage());
     const images = await Promise.all(imagePromises);
     return images.filter((img): img is string => !!img);
@@ -114,7 +116,6 @@ export const generateStoryboardImages = async (prompt: string, characterRefs: { 
   };
 
   try {
-    // Generate 4 images in parallel
     const imagePromises = Array(4).fill(0).map(() => generateSingleImage());
     const images = await Promise.all(imagePromises);
     return images.filter((img): img is string => !!img);
@@ -278,8 +279,17 @@ export type AnalysisType = keyof typeof analysisPrompts;
 
 export async function* analyzeScript(analysisType: AnalysisType, character?: string): AsyncGenerator<string> {
   const ai = getAiClient();
-  // @ts-ignore
-  const specificPrompt = analysisPrompts[analysisType](character);
+  let specificPrompt: string;
+  if (analysisType === 'emotional_arc') {
+    if (!character) {
+      yield `### AI Error: Character name is required for emotional arc analysis.`;
+      return;
+    }
+    specificPrompt = analysisPrompts.emotional_arc(character);
+  } else {
+    const promptFn = analysisPrompts[analysisType];
+    specificPrompt = (promptFn as () => string)();
+  }
   
   const prompt = `You are an expert script analyst AI. Your task is to analyze the screenplay for "THE VANGUARD" based on the user's specific request. Provide a detailed, professional-level analysis. Use markdown for formatting.
 
@@ -381,7 +391,12 @@ export const generateMoodboardImages = async (prompt: string): Promise<string[]>
         contents: contents,
         config: { responseModalities: [Modality.IMAGE] },
       });
-      return response.candidates[0].content.parts[0].inlineData?.data;
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          return part.inlineData.data;
+        }
+      }
+      throw new Error("No image data found in response");
     };
   
     try {
@@ -429,7 +444,7 @@ export async function* generateMusicIdeas(prompt: string): AsyncGenerator<string
     `;
 
     try {
-        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: fullPrompt }] }] });
         for await (const chunk of response) {
             yield chunk.text;
         }
@@ -505,47 +520,227 @@ export async function* runQualityControl(imageBase64: string, characterRefs: {na
   }
 }
 
-// FIX: Added dummy implementation for generateAssetTags
-export const generateAssetTags = async (shot: Shot): Promise<string[]> => {
-  console.log(`Generating tags for shot ${shot.id}`);
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const tags = ['sci-fi', shot.complexity.toLowerCase()];
-  if (shot.characters.length > 0) {
-    tags.push(...shot.characters.map(c => c.toLowerCase()));
-  }
-  tags.push(shot.location.toLowerCase() || 'unknown-location');
-  return tags;
+export async function* generateAssetTags(shot: Shot, imageBase64: string): AsyncGenerator<string[]> {
+    const ai = getAiClient();
+    const prompt = `You are an AI asset tagging system. Analyze the provided image and its description to generate relevant, searchable metadata tags.
+
+    **CONTEXT:**
+    - **Shot ID:** ${shot.id}
+    - **Description:** ${shot.description}
+    - **Characters:** ${shot.characters.join(', ')}
+    - **Location:** ${shot.location}
+
+    **INSTRUCTIONS:**
+    1.  Analyze the image and the context.
+    2.  Generate a list of 5-10 descriptive tags.
+    3.  Include tags for: characters present, location, shot type (e.g., 'close-up', 'wide-shot'), key objects, mood/emotion, and color.
+    4.  Format the output as a JSON array of strings. Example: ["jackson", "close-up", "interrogation-room", "fear", "dark"]
+    5.  Output ONLY the JSON array.
+    `;
+    const contents = { parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: imageBase64 } }] };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-pro",
+            contents,
+        });
+        const text = response.text;
+        const tags = JSON.parse(text.trim().replace(/```json|```/g, ''));
+        yield tags;
+    } catch (error) {
+        console.error("Error generating asset tags:", error);
+        yield ['tagging_error'];
+    }
 }
 
-// FIX: Added dummy implementation for generatePressKitContent
 export async function* generatePressKitContent(): AsyncGenerator<string> {
-  yield "### THE VANGUARD - PRESS KIT\n\n";
-  await new Promise(res => setTimeout(res, 200));
-  yield "**Logline:** A military interrogator discovers the armored alien she's questioning is actually a human time traveler—and the key to stopping her own obsessed mentor from destroying the timeline.\n\n";
-  await new Promise(res => setTimeout(res, 200));
-  yield "**Synopsis:** In an underground military facility, interrogator Jamie Jackson questions an imposing alien warrior called 'The Vanguard.' As she uncovers his impossible origin—a human soldier from the future, trapped and weaponized by time itself—she must stop her mentor from stealing the alien's armor and unraveling the fabric of reality.\n";
+  const ai = getAiClient();
+  const prompt = `You are a professional film publicist. Using the provided screenplay and project documents, generate the content for an Electronic Press Kit (EPK) for the film "THE VANGUARD".
+
+  **INSTRUCTIONS:**
+  1. Generate a compelling logline.
+  2. Write a 1-page synopsis.
+  3. Write a Director's Statement from the perspective of Bhishan Rai.
+  4. List key selling points.
+  5. Format the output as clean, professional markdown.
+
+  ---
+  **CORPUS:**
+  ${screenplay}
+  ${pitchDeck}
+  ---
+  `;
+
+  try {
+    const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+    for await (const chunk of response) {
+        yield chunk.text;
+    }
+  } catch (error) {
+    console.error("Error generating EPK content:", error);
+    yield "### Error: Could not generate EPK content.";
+  }
 }
 
-// FIX: Added dummy implementation for generateTrailerCutlist
 export async function* generateTrailerCutlist(): AsyncGenerator<string> {
-  yield "AI Generated Trailer Cutlist for THE VANGUARD (90 seconds)\n\n";
-  await new Promise(res => setTimeout(res, 200));
-  yield "### OPENING (0-15s)\n";
-  yield "* A01-S001-A - Alien desert establishing shot.\n";
-  yield "* A01-S004-A - Vanguard materializes in city.\n";
-  yield "* A01-S005-A - Glass shatters.\n\n";
-  await new Promise(res => setTimeout(res, 200));
-  yield "### RISING TENSION (15-45s)\n";
-  yield "* A02-S020-A - Jackson interrogates Vanguard.\n";
-  yield "* A02-S024-B - Hologram timeline appears.\n";
-  yield "* A02-S040-A - Duncan approaches with magnetic boots.\n\n";
-  await new Promise(res => setTimeout(res, 200));
-  yield "### CLIMAX (45-75s)\n";
-  yield "* A03-S050-D - Neural tendrils pierce skin (body horror).\n";
-  yield "* A02-S035-037 - Quick cut of Grandma's death.\n";
-  yield "* A03-S057-B - Hyper slow-mo bullet trajectory.\n\n";
-  await new Promise(res => setTimeout(res, 200));
-  yield "### FINALE (75-90s)\n";
-  yield "* A03-S066-A - Victor's hands become transparent.\n";
-  yield "* TITLE CARD: THE VANGUARD\n";
+  const ai = getAiClient();
+  const prompt = `You are a professional trailer editor. Read the entire screenplay for "THE VANGUARD" and create a "paper edit" or "cut list" for a 90-second theatrical trailer.
+
+  **INSTRUCTIONS:**
+  1. Identify high-impact visual moments, key dialogue lines, and major plot turning points.
+  2. Structure the trailer in a three-act structure (Setup, Confrontation, Climax).
+  3. List the shots by their **Shot ID** from the shot database.
+  4. Add brief notes on the music and sound design.
+  5. Format the output as a clean, timed list.
+
+  ---
+  **SCREENPLAY:**
+  ${screenplay}
+  ---
+  **SHOT DATABASE:**
+  ${JSON.stringify(allShots)}
+  ---
+  `;
+
+  try {
+    const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+    for await (const chunk of response) {
+        yield chunk.text;
+    }
+  } catch (error) {
+    console.error("Error generating trailer cutlist:", error);
+    yield "### Error: Could not generate trailer cutlist.";
+  }
+}
+
+export async function* runProductionAudit(shots: Shot[]): AsyncGenerator<string> {
+  const ai = getAiClient();
+  const prompt = `You are an AI Executive Producer. Analyze the entire shot database for "THE VANGUARD" and provide a high-level audit report.
+
+  **INSTRUCTIONS:**
+  1.  Review the status of all shots.
+  2.  Identify critical production blockers (e.g., hero sequences not started, entire acts with no locked storyboards).
+  3.  Flag inconsistencies (e.g., a shot marked "Video Complete" but its preceding shot is "Not Started").
+  4.  Check for missing resources (e.g., shots requiring VFX that don't have a VFX prompt).
+  5.  Provide a prioritized list of 3-5 critical issues that need immediate attention. Format as professional, actionable markdown.
+
+  ---
+  **SHOT DATABASE (JSON):**
+  ${JSON.stringify(shots, null, 2)}
+  ---
+  `;
+
+   try {
+    const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+    for await (const chunk of response) {
+        yield chunk.text;
+    }
+  } catch (error) {
+    console.error("Error running production audit:", error);
+    yield "### Error: Could not run production audit.";
+  }
+}
+
+export const getEmotionalArcData = async (character: string): Promise<EmotionalArcPoint[]> => {
+  const ai = getAiClient();
+  const prompt = `Analyze the screenplay for "THE VANGUARD" and generate the emotional arc data for the character "${character}".
+  
+  **INSTRUCTIONS:**
+  1. Identify 5-7 key scenes that define the character's emotional journey.
+  2. For each scene, provide an emotional intensity score from -10 (utter despair) to +10 (peak triumph/joy).
+  3. Provide a brief description of the emotional beat.
+  4. Format the output as a valid JSON array of objects.
+  
+  **JSON FORMAT:**
+  [
+    { "scene": "SCENE 006", "intensity": -8, "description": "Jackson's Failure Montage" },
+    { "scene": "SCENE 020", "intensity": 3, "description": "First Successful Interrogation" }
+  ]
+
+  **SCREENPLAY:**
+  ${screenplay}
+  `;
+  
+  try {
+    const response = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+    const text = response.text.trim().replace(/```json|```/g, '');
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error fetching emotional arc data:", error);
+    return [];
+  }
+};
+
+export const getPacingData = async (): Promise<PacingPoint[]> => {
+  const ai = getAiClient();
+  const prompt = `Analyze the screenplay for "THE VANGUARD" and generate pacing data based on scene intensity and average shot length (ASL).
+  
+  **INSTRUCTIONS:**
+  1. Break the film into ~10 major sequences/scenes.
+  2. For each, estimate the average shot length (ASL) in seconds.
+  3. Classify the intensity as 'Low', 'Medium', or 'High'.
+  4. Format the output as a valid JSON array of objects.
+
+  **JSON FORMAT:**
+  [
+    { "scene": "SCENE 001", "asl": 5.6, "intensity": "Medium" },
+    { "scene": "SCENE 006", "asl": 3.1, "intensity": "High" }
+  ]
+
+  **SCREENPLAY:**
+  ${screenplay}
+  `;
+  try {
+    const response = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+    const text = response.text.trim().replace(/```json|```/g, '');
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error fetching pacing data:", error);
+    return [];
+  }
+};
+
+export async function* analyzeShotComposition(shot: Shot, imageBase64: string): AsyncGenerator<string> {
+    const ai = getAiClient();
+    const prompt = `You are an expert Director of Photography like Roger Deakins. Your task is to analyze a generated storyboard image for the film "THE VANGUARD" based on the project's official documentation.
+
+    **CONTEXT:**
+    ---
+    **VISUAL LOOKBOOK:**
+    ${visualLookbook}
+    ---
+    **SHOT DETAILS:**
+    - **ID:** ${shot.id}
+    - **Description:** ${shot.description}
+    - **Camera Angle:** ${shot.cameraAngle || 'Not specified'}
+    - **Lens Type:** ${shot.lensType || 'Not specified'}
+    - **Lighting:** ${shot.lightingSetup || 'Not specified'}
+    ---
+
+    **INSTRUCTIONS:**
+    1.  The provided image is the storyboard frame to analyze.
+    2.  Critique the shot based on professional cinematography principles and the project's specific Visual Lookbook.
+    3.  Provide a detailed, bulleted list of feedback covering:
+        *   **Composition:** Rule of Thirds, leading lines, headroom, power dynamics.
+        *   **Lighting:** Does it match the lookbook for this scene? Is it motivated? Does it create the right mood?
+        *   **Visual Storytelling:** What does this shot communicate? Does it match the script's intent? Are there any missed opportunities for visual metaphors?
+        *   **Technical Execution:** Does the lens choice and camera angle match the description?
+    4.  Provide 1-2 actionable suggestions for how to improve the prompt to get a better result.
+    5.  Be professional, insightful, and constructive.
+    `;
+    const contents = { parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: imageBase64 } }] };
+
+    try {
+        const response = await ai.models.generateContentStream({
+            model: "gemini-2.5-pro",
+            contents,
+        });
+
+        for await (const chunk of response) {
+            yield chunk.text;
+        }
+    } catch (error) {
+        console.error("Error analyzing shot composition:", error);
+        yield "### AI Error: Could not analyze shot composition.";
+    }
 }

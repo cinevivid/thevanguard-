@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { View } from '../types';
 import Card from './Card';
@@ -15,8 +16,7 @@ const tools = [
   { view: View.STORYBOARD_GENERATOR, title: 'Storyboard Generator', description: 'Create storyboard frames for scenes.' },
   { view: View.VIDEO_GENERATOR, title: 'Video Generation', description: 'Animate storyboards with Veo.'},
   { view: View.AUDIO_PRODUCTION, title: 'Audio Production', description: 'Generate dialogue with ElevenLabs.'},
-  // FIX: Replaced View.SEQUENCE_ASSEMBLER with View.EDIT_BAY. 'SEQUENCE_ASSEMBLER' is not a valid member of the View enum. The 'Edit Bay' view handles EDL export functionality.
-  { view: View.EDIT_BAY, title: 'Sequence Assembler', description: 'Export EDLs for DaVinci Resolve.'}
+  { view: View.EDIT_BAY, title: 'Edit Bay', description: 'Assemble sequences and export EDLs.'}
 ];
 
 const ToolsHub: React.FC<ToolsHubProps> = ({ setCurrentView }) => {

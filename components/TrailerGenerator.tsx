@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import Card from './Card';
 import { generateTrailerCutlist } from '../services/geminiService';
@@ -24,8 +25,8 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
       let fullResponse = '';
       for await (const chunk of stream) {
         fullResponse += chunk;
-        setCutlist(fullResponse);
       }
+      setCutlist(fullResponse);
     } catch (err) {
       setError('Failed to generate cutlist from AI.');
     } finally {
@@ -33,26 +34,28 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
     }
   }, []);
 
+  const cutlistShotIds = useMemo(() => cutlist.match(/A\d{2}-S\d{3}-[A-Z]/g) || [], [cutlist]);
+
   const handleSendToEditBay = () => {
-    const shotIds = cutlist.match(/A\d{2}-S\d{3}-[A-Z]/g) || [];
-    // FIX: The type predicate `(clip): clip is TimelineClip` was too broad and causing a type error.
-    // By removing it, TypeScript can correctly infer the type of the filtered array.
-    const videoClips: TimelineClip[] = shotIds
+    const videoClips = cutlistShotIds
       .map(shotId => {
         const shot = shots.find(s => s.id === shotId);
         if (shot && generatedVideos[shot.id]) {
-          return {
+          const clip: TimelineClip = {
             id: `${shot.id}-trailer-${Date.now()}`,
             shot,
             url: generatedVideos[shot.id],
             type: 'Video' as 'Video',
-            startTime: 0, // Will be calculated below
-            duration: 4, // Default duration
+            startTime: 0,
+            duration: 4, 
           };
+          return clip;
         }
         return null;
       })
-      .filter((clip) => clip !== null);
+      // FIX: The type predicate `clip is TimelineClip` was incorrect because the inferred type of the mapped array's elements is narrower than `TimelineClip`. 
+      // Using `clip is NonNullable<typeof clip>` correctly narrows the type to the non-null object type, which is assignable to `TimelineClip`.
+      .filter((clip): clip is NonNullable<typeof clip> => clip !== null);
       
     let currentTime = 0;
     const positionedClips = videoClips.map(clip => {
@@ -61,7 +64,7 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
         return positionedClip;
     });
 
-    const newVideoTrack: TimelineTrack = { id: 'video', name: 'Video', clips: positionedClips };
+    const newVideoTrack: TimelineTrack = { id: 'video', name: 'Trailer Cut', clips: positionedClips };
     
     setTimeline([
         newVideoTrack,
@@ -72,9 +75,6 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
     
     setCurrentView(View.EDIT_BAY);
   };
-
-  // FIX: Added useMemo import
-  const cutlistShotIds = useMemo(() => cutlist.match(/A\d{2}-S\d{3}-[A-Z]/g) || [], [cutlist]);
 
   return (
     <div className="space-y-8">

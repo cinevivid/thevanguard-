@@ -11,35 +11,73 @@ export enum View {
   SHOT_DATABASE = 'Shot Database',
   SCRIPT_BREAKDOWN = 'AI Script Breakdown',
   LOOK_DEV_LAB = 'Look Dev Lab',
-  // FIX: Added missing AI_CASTING_STUDIO to View enum.
   AI_CASTING_STUDIO = 'AI Casting Studio',
   CORPUS_ASSISTANT = 'Corpus Assistant',
   CANONICAL_ASSETS = 'Canonical Assets',
   STORYBOARD_GENERATOR = 'Storyboard Generator',
+  SHOT_COMPOSITION_VALIDATOR = 'Shot Composition Validator',
   VIDEO_GENERATOR = 'Video Generation',
   AUDIO_PRODUCTION = 'Audio Production',
   COLOR_VFX_HUB = 'Color & VFX Hub',
   EDIT_BAY = 'Edit Bay',
   ASSET_LIBRARY = 'Asset Library',
   TRAILER_GENERATOR = 'Trailer Generator',
+  EMOTIONAL_ARC_VISUALIZER = 'Emotional Arc Visualizer',
+  PACING_VISUALIZER = 'Pacing Visualizer',
 }
 
 export type ShotStatus = 'Not Started' | 'Storyboard Generated' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error';
 
 export type ShotComplexity = 'EASY' | 'MEDIUM' | 'HARD';
+export type Department = 'director' | 'cinematography' | 'vfx' | 'sound';
+export type ApprovalStatus = 'pending' | 'approved' | 'needs_revision';
+export type PipelineStage = 'script' | 'storyboard' | 'previz' | 'production' | 'vfx' | 'post';
+
+
+export interface ShotPrompt {
+  type: 'midjourney_storyboard' | 'vfx' | 'animation' | 'character_ref';
+  prompt: string;
+  version: number;
+  status: 'draft' | 'ready' | 'approved' | 'rejected';
+  generatedImageUrl?: string;
+  consistencyScore?: number;
+}
+
+export interface DepartmentApproval {
+  department: Department;
+  status: ApprovalStatus;
+  notes?: string;
+}
 
 export interface Shot {
-  id: string;
-  scene: string;
-  shotNumber: string;
+  id: string; // e.g., A01-S001-A
+  scene: string; // e.g., SCENE 001
+  shotNumber: string; // e.g., S001-A
   description: string;
   status: ShotStatus;
   complexity: ShotComplexity;
-  prompt?: string;
   characters: string[];
   location: string;
   tags?: string[];
+  
+  // Enhanced Fields from Prompt
+  shotType?: 'storyboard' | 'vfx' | 'animation';
+  cameraAngle?: string;
+  cameraMovement?: string;
+  lensType?: string;
+  lightingSetup?: string;
+  vfxRequired: boolean;
+  animationRequired: boolean;
+  audioNotes?: string;
+  complexityScore?: number; // 1-10
+  
+  prompts: ShotPrompt[];
+  approvals: DepartmentApproval[];
+  pipelineStage: PipelineStage;
+  estimatedCost?: number;
+  notes?: string;
 }
+
 
 export type VFXComplexity = 'Simple' | 'Medium' | 'Complex';
 
@@ -53,7 +91,7 @@ export interface VFXShot {
 }
 
 export interface TimelineClip {
-  id: string; // Unique ID for the clip on the timeline, e.g., `${shot.id}-${Date.now()}`
+  id: string; 
   shot: Shot;
   url: string;
   type: 'Video' | 'Dialogue' | 'SFX' | 'Music';
@@ -72,4 +110,16 @@ export interface FestivalEntry {
   name: string;
   deadline: string;
   status: 'Researching' | 'Submitted' | 'Accepted' | 'Rejected';
+}
+
+export interface EmotionalArcPoint {
+  scene: string;
+  intensity: number; // -10 to 10
+  description: string;
+}
+
+export interface PacingPoint {
+  scene: string;
+  asl: number; // Average Shot Length
+  intensity: 'Low' | 'Medium' | 'High';
 }

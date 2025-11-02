@@ -1,5 +1,5 @@
 import { shotListDatabase as rawShotlist } from './shotListDatabase';
-import { Shot, ShotStatus, ShotComplexity } from '../types';
+import { Shot, ShotStatus, ShotComplexity, PipelineStage } from '../types';
 
 function parseShotlist(): Shot[] {
   const lines = rawShotlist.split('\n');
@@ -17,7 +17,12 @@ function parseShotlist(): Shot[] {
       if (parts.length > 5 && parts[1] !== '' && !parts[1].startsWith(' # ')) {
         try {
             const id = parts[2];
-            const [act, sceneNum, shotLetter] = id.split('-');
+            if (!id || !id.includes('-S')) continue; // Skip header/malformed lines
+
+            const [_act, sceneNum, shotLetter] = id.split('-');
+            
+            const vfxRequired = parts[3].toLowerCase().includes('vfx') || parts[6].toLowerCase().includes('vfx');
+
             const shot: Shot = {
                 id: id,
                 scene: `SCENE ${sceneNum.replace('S','')}`,
@@ -25,13 +30,24 @@ function parseShotlist(): Shot[] {
                 description: parts[3],
                 status: 'Not Started',
                 complexity: parts[5].includes('EASY') ? 'EASY' : parts[5].includes('MEDIUM') ? 'MEDIUM' : 'HARD',
-                characters: [], // placeholder
-                location: '', // placeholder
+                characters: [], // Placeholder, could be parsed from description
+                location: '', // Placeholder, would need scene-level data
                 tags: [],
+                
+                // New Enhanced Fields
+                vfxRequired: vfxRequired,
+                animationRequired: parts[3].toLowerCase().includes('animation'),
+                pipelineStage: 'script',
+                prompts: [],
+                approvals: [],
+                
+                // Placeholder cinematography
+                cameraAngle: 'Medium',
+                lensType: '35mm',
             };
             shots.push(shot);
         } catch (e) {
-            // Ignore header or malformed lines
+             console.warn("Could not parse shot line:", line, e);
         }
       }
     }

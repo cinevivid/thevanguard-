@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shot, ShotStatus, View } from '../types';
 import Card from './Card';
-import { getDailyShootList, getAIDirectorNotes } from '../services/geminiService';
+import { getDailyShootList, getAIDirectorNotes, runProductionAudit } from '../services/geminiService';
 
 interface DirectorDashboardProps {
   shots: Shot[];
@@ -9,39 +9,41 @@ interface DirectorDashboardProps {
 }
 
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
-    return <div className="prose prose-invert prose-sm max-w-none text-vanguard-text whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: content.replace(/### (.*?)\n/g, '<h3>$1</h3>').replace(/\n/g, '<br />').replace(/\* (.*?)\n/g, '<li>$1</li>') }} />;
+    return <div className="prose prose-invert prose-sm max-w-none text-vanguard-text whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: content.replace(/### (.*?)\n/g, '<h3>$1</h3>').replace(/\n/g, '<br />').replace(/\* (.*?)\<br \/\>/g, '<li class="ml-4 list-disc">$1</li>') }} />;
 };
 
 const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrentView }) => {
   const [shootList, setShootList] = useState('');
   const [directorNotes, setDirectorNotes] = useState('');
+  const [auditResult, setAuditResult] = useState('');
   const [isLoadingShootList, setIsLoadingShootList] = useState(true);
   const [isLoadingNotes, setIsLoadingNotes] = useState(true);
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // Fetch Daily Shoot List
+      setIsLoadingShootList(true);
       try {
         const shootListStream = getDailyShootList(shots);
         let fullResponse = '';
         for await (const chunk of shootListStream) {
           fullResponse += chunk;
-          setShootList(fullResponse);
         }
+        setShootList(fullResponse);
       } catch (e) {
         setShootList("Error fetching shoot list.");
       } finally {
         setIsLoadingShootList(false);
       }
 
-      // Fetch AI Director Notes
+      setIsLoadingNotes(true);
       try {
         const notesStream = getAIDirectorNotes(shots);
         let fullResponse = '';
         for await (const chunk of notesStream) {
           fullResponse += chunk;
-          setDirectorNotes(fullResponse);
         }
+        setDirectorNotes(fullResponse);
       } catch (e) {
         setDirectorNotes("Error fetching director notes.");
       } finally {
@@ -50,6 +52,23 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
     };
     fetchDashboardData();
   }, [shots]);
+  
+  const handleRunAudit = async () => {
+    setIsLoadingAudit(true);
+    setAuditResult('');
+     try {
+        const auditStream = runProductionAudit(shots);
+        let fullResponse = '';
+        for await (const chunk of auditStream) {
+          fullResponse += chunk;
+        }
+        setAuditResult(fullResponse);
+      } catch (e) {
+        setAuditResult("Error running production audit.");
+      } finally {
+        setIsLoadingAudit(false);
+      }
+  };
 
   const stats = useMemo(() => {
     const total = shots.length;
@@ -94,8 +113,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
                 <h4 className="font-semibold mb-2">Shot Status Breakdown</h4>
                 <div className="flex rounded-full overflow-hidden h-3">
                     {Object.entries(stats.statusCounts).map(([status, count]) => (
-                        // Fix: Explicitly cast `count` to a number to resolve a type inference issue with Object.entries.
-                        <div key={status} className={`${statusColors[status as ShotStatus]}`} style={{width: `${(Number(count) / stats.total) * 100}%`}} title={`${status}: ${count} shots`}></div>
+                        <div key={status} className={`${statusColors[status as ShotStatus]}`} style={{width: `${(count / stats.total) * 100}%`}} title={`${status}: ${count} shots`}></div>
                     ))}
                 </div>
             </div>
@@ -114,6 +132,19 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
             </div>
         </Card>
       </div>
+
+      <Card title="AI Production Audit">
+        <div className="flex justify-end mb-4">
+            <button onClick={handleRunAudit} disabled={isLoadingAudit} className="bg-vanguard-accent hover:bg-vanguard-accent-hover text-white font-bold py-2 px-4 rounded-lg">
+                {isLoadingAudit ? 'Auditing...' : 'Run Full Production Audit'}
+            </button>
+        </div>
+        <div className="p-4 bg-vanguard-bg rounded-md min-h-[150px] max-h-[50vh] overflow-y-auto">
+            {isLoadingAudit && <p>AI is scanning all 430 shots for issues...</p>}
+            {!isLoadingAudit && !auditResult && <p>Click "Run Audit" to have the AI identify critical production blockers and inconsistencies.</p>}
+            {auditResult && <MarkdownRenderer content={auditResult} />}
+        </div>
+      </Card>
     </div>
   );
 };

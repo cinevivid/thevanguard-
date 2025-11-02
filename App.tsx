@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -24,7 +23,9 @@ import ProductionOffice from './components/ProductionOffice';
 import AssetLibrary from './components/AssetLibrary';
 import TrailerGenerator from './components/TrailerGenerator';
 import AICastingStudio from './components/AICastingStudio';
-
+import EmotionalArcVisualizer from './components/EmotionalArcVisualizer';
+import PacingVisualizer from './components/PacingVisualizer';
+import ShotCompositionValidator from './components/ShotCompositionValidator';
 
 import { View, Shot, TimelineTrack } from './types';
 import { shotDatabase } from './data/shotDatabase';
@@ -127,6 +128,8 @@ const App: React.FC = () => {
         return <CanonicalAssets lockedAssets={lockedAssets} setLockedAssets={setLockedAssets} />;
       case View.STORYBOARD_GENERATOR:
         return <StoryboardGenerator shots={shots} setShots={setShots} lockedAssets={lockedAssets} lockedStoryboard={lockedStoryboard} setLockedStoryboard={setLockedStoryboard} />;
+      case View.SHOT_COMPOSITION_VALIDATOR:
+        return <ShotCompositionValidator shots={shots} lockedStoryboard={lockedStoryboard} />;
       case View.VIDEO_GENERATOR:
         return <VideoGenerator shots={shots} setShots={setShots} lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} setGeneratedVideos={setGeneratedVideos} />;
       case View.AUDIO_PRODUCTION:
@@ -139,6 +142,10 @@ const App: React.FC = () => {
         return <AssetLibrary lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} shots={shots} />;
       case View.TRAILER_GENERATOR:
         return <TrailerGenerator shots={shots} generatedVideos={generatedVideos} setTimeline={setTimeline} setCurrentView={setCurrentView} />;
+      case View.EMOTIONAL_ARC_VISUALIZER:
+        return <EmotionalArcVisualizer />;
+      case View.PACING_VISUALIZER:
+        return <PacingVisualizer />;
       default:
         return <DirectorDashboard shots={shots} setCurrentView={setCurrentView} />;
     }

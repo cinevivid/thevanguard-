@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from './Card';
 import { Shot, ShotStatus } from '../types';
@@ -75,13 +76,30 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
     setStatuses(prev => ({ ...prev, [selectedShotId]: 'Video Generating' }));
 
     try {
-      let operation = await generateVideoFromImage(selectedShot.prompt || selectedShot.description, lockedStoryboard[selectedShotId]);
+      const storyboardPrompt = selectedShot.prompts.find(p => p.type === 'midjourney_storyboard')?.prompt;
+      const ai = new (window as any).GoogleGenAI({ apiKey: process.env.API_KEY });
+      let operation = await ai.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        // FIX: The 'Shot' type has a 'prompts' array, not a singular 'prompt' property.
+        // This now finds the storyboard-specific prompt or falls back to the shot description.
+        prompt: storyboardPrompt || selectedShot.description,
+        image: {
+          imageBytes: lockedStoryboard[selectedShotId],
+          mimeType: 'image/png',
+        },
+        config: {
+          numberOfVideos: 1,
+          resolution: '720p',
+          aspectRatio: '16:9'
+        }
+      });
       setStatusMessage('Processing source image... this can take a few minutes.');
       
       pollingInterval.current = window.setInterval(async () => {
         try {
+          const pollAi = new (window as any).GoogleGenAI({ apiKey: process.env.API_KEY });
           setStatusMessage('Checking generation status...');
-          operation = await getVideoOperationStatus(operation);
+          operation = await pollAi.operations.getVideosOperation({operation: operation});
 
           if (operation.done) {
             stopPolling();
@@ -94,7 +112,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
               setStatuses(prev => ({ ...prev, [selectedShotId]: 'Video Complete' }));
 
               // Auto-tag asset
-              const tags = await generateAssetTags(selectedShot);
+              let tags: string[] = [];
+              const tagStream = generateAssetTags(selectedShot, lockedStoryboard[selectedShotId]);
+              for await (const tagChunk of tagStream) {
+                tags = tags.concat(tagChunk);
+              }
               setShots(prev => prev.map(s => s.id === selectedShotId ? { ...s, status: 'Video Complete', tags } : s));
 
               setIsLoading(false);
@@ -104,9 +126,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
             }
           }
         } catch (pollError: any) {
-          if (pollError?.message?.includes('Requested entity was not found')) setError('API key error. Please re-select your API key.');
+          if (pollError?.message?.includes('Requested entity was not found')) {
+            setError('API key error. Please re-select your API key.');
+            setHasApiKey(false);
+          }
           else setError(`An error occurred while checking status: ${pollError.message}`);
-          setHasApiKey(false);
           stopPolling();
           setIsLoading(false);
           setStatuses(prev => ({ ...prev, [selectedShotId]: 'Error' }));
@@ -185,8 +209,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
               </Card>
 
               {/* FIX: The disabled prop expects a boolean. Coerce the string/undefined from generatedVideos to a boolean. */}
-              <button onClick={handleGenerateVideo} disabled={isLoading || !!generatedVideos[selectedShot.id]} className="w-full bg-vanguard-accent hover:bg-vanguard-accent-hover text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:bg-vanguard-text-secondary disabled:cursor-not-allowed">
-                {isLoading ? 'Generating...' : generatedVideos[selectedShot.id] ? 'Video Already Generated' : `Generate Video for ${selectedShot.shotNumber}`}
+              <button onClick={handleGenerateVideo} disabled={isLoading || !!(selectedShot && generatedVideos[selectedShot.id])} className="w-full bg-vanguard-accent hover:bg-vanguard-accent-hover text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:bg-vanguard-text-secondary disabled:cursor-not-allowed">
+                {isLoading ? 'Generating...' : (selectedShot && generatedVideos[selectedShot.id]) ? 'Video Already Generated' : `Generate Video for ${selectedShot.shotNumber}`}
               </button>
 
               <Card title="Generation Status & Preview">
@@ -198,8 +222,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
                       <p className="text-xs mt-1">Please keep this tab open. Video generation can take several minutes.</p>
                     </div>
                   )}
-                  {!isLoading && generatedVideos[selectedShot.id] && <video src={generatedVideos[selectedShot.id]} controls autoPlay loop className="w-full h-full rounded-md" />}
-                  {!isLoading && !generatedVideos[selectedShot.id] && (<div className="text-center text-vanguard-text-secondary"><p>{error ? `Generation failed: ${error}` : 'Generated video will appear here.'}</p></div>)}
+                  {!isLoading && selectedShot && generatedVideos[selectedShot.id] && <video src={generatedVideos[selectedShot.id]} controls autoPlay loop className="w-full h-full rounded-md" />}
+                  {!isLoading && !(selectedShot && generatedVideos[selectedShot.id]) && (<div className="text-center text-vanguard-text-secondary"><p>{error ? `Generation failed: ${error}` : 'Generated video will appear here.'}</p></div>)}
                 </div>
               </Card>
             </>

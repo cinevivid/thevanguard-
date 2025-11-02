@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import Card from './Card';
 import { Shot, ShotStatus } from '../types';
-import { generatePromptWithAIDirector, generateStoryboardImages } from '../services/geminiService'; // Assuming these are available
 
 interface ShotDatabaseManagerProps {
   shots: Shot[];
@@ -22,8 +21,10 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
     let filtered = filter === 'All' ? shots : shots.filter(s => s.status === filter);
     
     return filtered.sort((a, b) => {
-      if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
-      if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
+      const aVal = a[sortColumn] || '';
+      const bVal = b[sortColumn] || '';
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
   }, [shots, filter, sortColumn, sortDirection]);
@@ -50,8 +51,7 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
       generatedCount++;
       setBatchProgress(`(${generatedCount}/${shotsToGenerate.length}) Generating prompt for ${shot.id}...`);
       
-      // Simulate AI Director and image generation
-      await new Promise(res => setTimeout(res, 2000)); // Simulate network/AI delay
+      await new Promise(res => setTimeout(res, 2000));
       
       setBatchProgress(`(${generatedCount}/${shotsToGenerate.length}) Generating images for ${shot.id}...`);
       await new Promise(res => setTimeout(res, 3000));
@@ -76,6 +76,7 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
   }
 
   const statusOptions: (ShotStatus | 'All')[] = ['All', 'Not Started', 'Storyboard Generated', 'Storyboard Locked', 'Video Generating', 'Video Complete', 'Error'];
+  const columns: (keyof Shot)[] = ['id', 'description', 'status', 'complexity', 'cameraAngle', 'vfxRequired', 'pipelineStage'];
 
   return (
     <div className="space-y-8 h-full flex flex-col">
@@ -107,12 +108,14 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
         </div>
         {isBatchGenerating && <div className="p-2 text-center text-sm bg-vanguard-accent/20 text-vanguard-accent">{batchProgress}</div>}
         <div className="overflow-y-auto flex-1">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm table-fixed">
             <thead className="sticky top-0 bg-vanguard-bg-secondary z-10">
               <tr className="border-b border-vanguard-bg-tertiary">
-                {['id', 'scene', 'shotNumber', 'description', 'status', 'complexity'].map(col => (
-                    <th key={col} className="py-3 px-4 uppercase tracking-wider text-xs text-vanguard-text-secondary cursor-pointer" onClick={() => handleSort(col as keyof Shot)}>
-                        {col.replace('shotNumber', 'Shot #')}
+                {columns.map(col => (
+                    <th key={col} className={`py-3 px-4 uppercase tracking-wider text-xs text-vanguard-text-secondary cursor-pointer 
+                      ${col === 'description' ? 'w-2/5' : 'w-auto'}`}
+                      onClick={() => handleSort(col as keyof Shot)}>
+                        {col.replace(/([A-Z])/g, ' $1').replace('shotNumber', 'Shot #')}
                         {sortColumn === col && (sortDirection === 'asc' ? ' ▲' : ' ▼')}
                     </th>
                 ))}
@@ -121,16 +124,17 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
             <tbody>
               {filteredAndSortedShots.map(shot => (
                 <tr key={shot.id} className="border-b border-vanguard-bg-tertiary hover:bg-vanguard-bg-tertiary/50">
-                  <td className="py-3 px-4 font-mono text-xs">{shot.id}</td>
-                  <td className="py-3 px-4">{shot.scene}</td>
-                  <td className="py-3 px-4">{shot.shotNumber}</td>
-                  <td className="py-3 px-4 max-w-sm truncate">{shot.description}</td>
+                  <td className="py-3 px-4 font-mono text-xs truncate">{shot.id}</td>
+                  <td className="py-3 px-4 truncate" title={shot.description}>{shot.description}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(shot.status)}`}>
                         {shot.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4">{shot.complexity}</td>
+                  <td className="py-3 px-4 truncate">{shot.complexity}</td>
+                  <td className="py-3 px-4 truncate">{shot.cameraAngle || 'N/A'}</td>
+                  <td className="py-3 px-4 text-center">{shot.vfxRequired ? <span className="text-vanguard-orange">Yes</span> : '—'}</td>
+                  <td className="py-3 px-4 truncate capitalize">{shot.pipelineStage}</td>
                 </tr>
               ))}
             </tbody>

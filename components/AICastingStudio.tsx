@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import Card from './Card';
 import { generateCharacterConcepts } from '../services/geminiService';

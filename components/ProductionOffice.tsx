@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Card from './Card';
 import { vfxDatabase } from '../data/vfxDatabase';
@@ -47,8 +48,8 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
         let fullResponse = '';
         for await (const chunk of stream) {
             fullResponse += chunk;
-            setPressKitContent(fullResponse);
         }
+        setPressKitContent(fullResponse);
     } catch (e) {
         setPressKitContent("Failed to generate Press Kit content.");
     } finally {
@@ -148,7 +149,7 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
           <div className="p-4 bg-vanguard-bg rounded-md min-h-[200px] max-h-[60vh] overflow-y-auto prose prose-invert prose-sm max-w-none text-vanguard-text whitespace-pre-wrap">
               {isPressKitLoading && <p>AI is assembling your press kit...</p>}
               {!isPressKitLoading && !pressKitContent && <p>Generated press kit content will appear here.</p>}
-              {pressKitContent}
+              <pre>{pressKitContent}</pre>
           </div>
         </Card>
       )}
