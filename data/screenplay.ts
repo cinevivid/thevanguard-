@@ -1,12 +1,9 @@
-
 export const screenplay = `
 THE VANGUARD
 
 by
 Bhishan Rai
 bhishan.rai@student.nyfa.edu
-
----
 
 FADE IN:
 
@@ -29,7 +26,9 @@ GREEN PRIEST (eldest, robotic eye) leads. BLUE PRIEST (half his face circuitry) 
 They slam their staffs into sand in unison.
 
 ONE.
+
 TWO.
+
 THREE.
 
 From the darkness beyond the circle, a massive FIGURE emerges.

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { corpus } from '../data/allDocuments';
 import { chatWithCorpusStream } from '../services/geminiService';
@@ -38,9 +37,11 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
 
 
 const CorpusAssistant: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'model', content: "Hello! I am The Vanguard's production assistant. How can I help you with your project documents today?" }
+  ]);
   const [userInput, setUserInput] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -79,36 +80,6 @@ const CorpusAssistant: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    // This effect runs only once on mount to answer the user's initial question.
-    const initialQuestion = "what you have save our docs so far ?";
-    const sendInitialQuestion = async () => {
-        setIsLoading(true);
-        setMessages([{ role: 'user', content: initialQuestion }]);
-        
-        try {
-            const stream = chatWithCorpusStream(initialQuestion, corpus);
-            let fullResponse = '';
-            setMessages(prev => [...prev, { role: 'model', content: '' }]);
-            
-            for await (const chunk of stream) {
-                fullResponse += chunk;
-                setMessages(prev => {
-                    const updated = [...prev];
-                    updated[updated.length - 1].content = fullResponse;
-                    return updated;
-                });
-            }
-        } catch (error) {
-            console.error("Failed to get initial response from AI:", error);
-            setMessages(prev => [...prev, { role: 'model', content: 'Sorry, I encountered an error on startup.' }]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    sendInitialQuestion();
-  }, []);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
