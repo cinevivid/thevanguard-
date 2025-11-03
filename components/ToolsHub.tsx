@@ -12,8 +12,8 @@ const tools = [
   { view: View.WRITERS_ROOM, title: 'Script Analysis', description: 'Get loglines, themes, and summaries.' },
   // FIX: Property 'EMOTIONAL_ARCHITECTURE' does not exist on type 'typeof View'. This tool is part of the 'WRITERS_ROOM' view.
   { view: View.WRITERS_ROOM, title: 'Emotional Arcs', description: 'Trace character emotional journeys.' },
-  // FIX: Property 'CONTINUITY_CHECKER' does not exist on type 'typeof View'. This tool is part of the 'WRITERS_ROOM' view.
-  { view: View.WRITERS_ROOM, title: 'Continuity Checker', description: 'Find potential script inconsistencies.' },
+  // FIX: Property 'CONTINUITY_CHECKER' does not exist on type 'typeof View'. This tool is now part of the 'CONTINUITY_VERIFIER' view.
+  { view: View.CONTINUITY_VERIFIER, title: 'Continuity Verifier', description: 'Find potential script inconsistencies.' },
   { view: View.SHOT_DATABASE, title: 'Shot Database', description: 'Manage and track all 430 shots.' },
   // FIX: Property 'CANONICAL_ASSETS' does not exist on type 'typeof View'. This is now part of the 'ART_DEPT' view.
   { view: View.ART_DEPT, title: 'Canonical Assets', description: 'Generate and lock character DNA.' },
@@ -22,7 +22,7 @@ const tools = [
   // FIX: Property 'VIDEO_GENERATOR' does not exist on type 'typeof View'. This is now part of the 'POST_PRODUCTION_SUITE' view.
   { view: View.POST_PRODUCTION_SUITE, title: 'Video Generation', description: 'Animate storyboards with Veo.'},
   // FIX: Property 'AUDIO_PRODUCTION' does not exist on type 'typeof View'. This is now part of the 'POST_PRODUCTION_SUITE' view.
-  { view: View.POST_PRODUCTION_SUITE, title: 'Audio Production', description: 'Generate dialogue with ElevenLabs.'},
+  { view: View.POST_PRODUCTION_SUITE, title: 'Audio Production', description: 'Generate dialogue and sound.'},
   // FIX: Property 'EDIT_BAY' does not exist on type 'typeof View'. This is now part of the 'POST_PRODUCTION_SUITE' view.
   { view: View.POST_PRODUCTION_SUITE, title: 'Edit Bay', description: 'Assemble sequences and export EDLs.'}
 ];

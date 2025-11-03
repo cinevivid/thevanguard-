@@ -1,5 +1,6 @@
+
 import { shotListDatabase as rawShotlist } from './shotListDatabase';
-import { Shot, ShotStatus, ShotComplexity, PipelineStage, DepartmentApproval, ShotPrompt } from '../types';
+import { Shot, ShotStatus, ShotComplexity, PipelineStage, DepartmentApproval, ShotPrompt, Department } from '../types';
 
 function parseShotlist(): Shot[] {
   const lines = rawShotlist.split('\n');
@@ -24,6 +25,14 @@ function parseShotlist(): Shot[] {
             const vfxRequired = parts[3].toLowerCase().includes('vfx') || parts[6].toLowerCase().includes('vfx');
             const animationRequired = parts[3].toLowerCase().includes('animation');
 
+            // FIX: Correctly initialize approvals as an object instead of an array to match the 'Record<Department, DepartmentApproval>' type.
+            const allDepartments: Department[] = ['director', 'cinematography', 'vfx', 'sound'];
+            const approvals = allDepartments.reduce((acc, dept) => {
+              acc[dept] = { department: dept, status: 'pending' };
+              return acc;
+            }, {} as Record<Department, DepartmentApproval>);
+
+
             const shot: Shot = {
                 id: id,
                 scene: `SCENE ${sceneNum.replace('S','')}`,
@@ -39,7 +48,7 @@ function parseShotlist(): Shot[] {
                 animationRequired: animationRequired,
                 pipelineStage: 'script',
                 prompts: [] as ShotPrompt[],
-                approvals: [] as DepartmentApproval[],
+                approvals: approvals,
                 
                 // Placeholder cinematography, can be filled by AI Director later
                 cameraAngle: parts[3].match(/wide|close-up|medium/i)?.[0].toLowerCase() || 'medium',

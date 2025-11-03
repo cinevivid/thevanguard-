@@ -4,9 +4,9 @@ import { screenplay } from '../data/screenplay';
 import { visualLookbook } from '../data/visualLookbook';
 import { productionCalendar } from '../data/productionCalendar';
 import { consistencyFormula } from '../data/consistencyFormula';
-import { Shot, EmotionalArcPoint, PacingPoint, TimelineClip } from "../types";
+import { Shot, EmotionalArcPoint, PacingPoint, TimelineClip, Act, Scene } from "../types";
 import { pitchDeck } from "../data/pitchDeck";
-import { shotDatabase as allShots } from "../data/shotDatabase";
+import { productionData } from "../data/productionData";
 
 const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
@@ -577,7 +577,7 @@ export async function* generateTrailerCutlist(): AsyncGenerator<string> {
   ${screenplay}
   ---
   **SHOT DATABASE:**
-  ${JSON.stringify(allShots)}
+  ${JSON.stringify(productionData.shots.map(s => ({id: s.id, description: s.description})))}
   ---
   `;
 
@@ -697,20 +697,20 @@ export async function* analyzeShotComposition(shot: Shot, imageBase64: string): 
     }
 }
 
-export async function* runProductionAudit(shots: Shot[]): AsyncGenerator<string> {
+export async function* runProductionAudit(acts: Act[], scenes: Scene[], shots: Shot[]): AsyncGenerator<string> {
   const ai = getAiClient();
-  const prompt = `You are an AI Executive Producer. Analyze the entire shot database for "THE VANGUARD" and provide a high-level audit report.
+  const prompt = `You are an AI Executive Producer for the film "THE VANGUARD". Analyze the entire production database (Acts, Scenes, and Shots) and provide a high-level audit report.
 
   **INSTRUCTIONS:**
-  1.  Review the status of all shots.
+  1.  Review the status of all shots within the context of their scenes and acts.
   2.  Identify critical production blockers (e.g., hero sequences not started, entire acts with no locked storyboards, shots stuck in 'Pending Approval' for too long).
   3.  Flag inconsistencies (e.g., a shot marked "Video Complete" but its preceding shot is "Not Started").
   4.  Check for missing resources (e.g., shots requiring VFX that don't have a VFX prompt).
   5.  Provide a prioritized list of 3-5 critical issues that need immediate attention. Format as professional, actionable markdown.
 
   ---
-  **SHOT DATABASE (JSON):**
-  ${JSON.stringify(shots.map(s => ({id: s.id, status: s.status, vfxRequired: s.vfxRequired, prompts: s.prompts.length})), null, 2)}
+  **PRODUCTION DATABASE (JSON):**
+  ${JSON.stringify({ acts, scenes, shots: shots.map(s => ({id: s.id, status: s.status, vfxRequired: s.vfxRequired, prompts: s.prompts.length})) }, null, 2)}
   ---
   `;
 
@@ -830,7 +830,8 @@ export const generatePropConcept = async (description: string): Promise<string[]
   };
   try {
     const imagePromises = Array(4).fill(0).map(() => generateSingleImage());
-    return await Promise.all(imagePromises.filter(p => p !== null) as Promise<string>[]);
+    const results = await Promise.all(imagePromises);
+    return results.filter((img): img is string => !!img);
   } catch (error) {
     console.error("Error generating prop concepts:", error);
     return [];

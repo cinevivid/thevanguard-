@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from './Card';
 import { Shot, ShotStatus } from '../types';
 import { generateVideoFromImage, getVideoOperationStatus, fetchGeneratedVideo, generateAssetTags } from '../services/geminiService';
+import { GoogleGenAI } from '@google/genai';
 
 interface VideoGeneratorProps {
   shots: Shot[];
@@ -19,6 +20,7 @@ declare global {
   }
   interface Window {
     aistudio?: AIStudio;
+    GoogleGenAI?: typeof GoogleGenAI;
   }
 }
 
@@ -68,7 +70,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
   };
 
   const handleGenerateVideo = async () => {
-    if (!selectedShotId || !selectedShot || !lockedStoryboard[selectedShotId]) return;
+    if (!selectedShotId || !selectedShot || !lockedStoryboard[selectedShotId] || !window.GoogleGenAI) return;
 
     setIsLoading(true);
     setError(null);
@@ -77,7 +79,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
 
     try {
       const storyboardPrompt = selectedShot.prompts.find(p => p.type === 'midjourney_storyboard')?.prompt;
-      const ai = new (window as any).GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new window.GoogleGenAI({ apiKey: process.env.API_KEY });
       let operation = await ai.models.generateVideos({
         model: 'veo-3.1-fast-generate-preview',
         // FIX: The 'Shot' type has a 'prompts' array, not a singular 'prompt' property.
@@ -97,7 +99,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
       
       pollingInterval.current = window.setInterval(async () => {
         try {
-          const pollAi = new (window as any).GoogleGenAI({ apiKey: process.env.API_KEY });
+          if (!window.GoogleGenAI) return;
+          const pollAi = new window.GoogleGenAI({ apiKey: process.env.API_KEY });
           setStatusMessage('Checking generation status...');
           operation = await pollAi.operations.getVideosOperation({operation: operation});
 

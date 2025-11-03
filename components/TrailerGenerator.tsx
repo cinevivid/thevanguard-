@@ -56,8 +56,8 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
         return null;
       })
       // FIX: The type predicate `clip is TimelineClip` was incorrect because the inferred type of the mapped array's elements is narrower than `TimelineClip`. 
-      // Using `clip is NonNullable<typeof clip>` correctly narrows the type to the non-null object type, which is assignable to `TimelineClip`.
-      .filter((clip): clip is NonNullable<typeof clip> => clip !== null);
+      // Using a boolean filter correctly narrows the type to the non-null object type, which is assignable to `TimelineClip`.
+      .filter(Boolean);
       
     let currentTime = 0;
     const positionedClips = videoClips.map(clip => {
@@ -73,6 +73,7 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
         { id: 'dialogue', name: 'Dialogue', clips: [] },
         { id: 'sfx', name: 'SFX', clips: [] },
         { id: 'music', name: 'Music', clips: [] },
+        { id: 'ambience', name: 'Ambience', clips: [] },
     ]);
     
     // FIX: Property 'EDIT_BAY' does not exist on type 'typeof View'. Navigate to POST_PRODUCTION_SUITE instead.

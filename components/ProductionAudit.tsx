@@ -2,9 +2,12 @@
 import React, { useState, useCallback } from 'react';
 import Card from './Card';
 import { runProductionAudit } from '../services/geminiService';
-import { Shot } from '../types';
+import { Act, Scene, Shot } from '../types';
 
 interface ProductionAuditProps {
+    // FIX: Add acts and scenes to props for full production context
+    acts: Act[];
+    scenes: Scene[];
     shots: Shot[];
 }
 
@@ -12,7 +15,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     return <div className="prose prose-invert prose-sm max-w-none text-vanguard-text whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: content.replace(/### (.*?)\n/g, '<h3>$1</h3>').replace(/\n/g, '<br />').replace(/\* (.*?)\<br \/\>/g, '<li class="ml-4 list-disc">$1</li>') }} />;
 };
 
-const ProductionAudit: React.FC<ProductionAuditProps> = ({ shots }) => {
+const ProductionAudit: React.FC<ProductionAuditProps> = ({ acts, scenes, shots }) => {
   const [auditResult, setAuditResult] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +25,8 @@ const ProductionAudit: React.FC<ProductionAuditProps> = ({ shots }) => {
     setError(null);
     setAuditResult('');
     try {
-      const stream = runProductionAudit(shots);
+      // FIX: Pass all required arguments (acts, scenes, shots) to the audit function.
+      const stream = runProductionAudit(acts, scenes, shots);
       let fullResponse = '';
       for await (const chunk of stream) {
         fullResponse += chunk;
@@ -34,7 +38,7 @@ const ProductionAudit: React.FC<ProductionAuditProps> = ({ shots }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [shots]);
+  }, [acts, scenes, shots]);
 
   return (
     <div className="space-y-8">

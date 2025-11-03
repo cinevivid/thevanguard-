@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from './Card';
 // FIX: Add BudgetItem to import to support budget tracking props.
@@ -154,7 +155,7 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, bu
                     <p className={`text-sm ${task.status === 'Complete' ? 'line-through' : ''}`}>{task.description}</p>
                     <p className="text-xs text-vanguard-text-secondary">{task.dueDate}</p>
                   </div>
-                   <span className={`text-xs font-bold px-2 py-1 rounded-full ${Object.values(priorityColors).find(c => c.includes(priorityColors[task.priority].split('-')[2]))?.replace('border-', 'bg-').replace('/20', '')}/20`}>{task.priority}</span>
+                   <span className={`text-xs font-bold px-2 py-1 rounded-full bg-${priorityColors[task.priority].split('-')[2]}/20 text-${priorityColors[task.priority].split('-')[2]}-400`}>{task.priority}</span>
                 </li>
               ))}
             </ul>

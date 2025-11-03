@@ -6,17 +6,19 @@ export enum View {
   CAMERA_DEPT = 'Camera & Lighting Dept.',
   POST_PRODUCTION_SUITE = 'Post-Production Suite',
   
-  // Standalone tools moved to sidebar sections but kept for routing
+  // Standalone/Legacy tools
   PRODUCTION_OFFICE = 'Production Office',
   SHOT_DATABASE = 'Shot Database',
   CONTINUITY_VERIFIER = 'Continuity Verifier',
   ASSET_LIBRARY = 'Asset Library',
   PRODUCTION_AUDIT = 'Production Audit',
+  DEPARTMENTS = 'Departments',
   
   // Hub for all tools
   TOOLS_HUB = 'Tools Hub',
 }
 
+// FIX: Removed duplicate 'Storyboard Generated' and legacy 'Pending Review' to create a single source of truth for shot statuses.
 export type ShotStatus = 'Not Started' | 'Pending Approval' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error' | 'Storyboard Generated';
 
 export type ShotComplexity = 'EASY' | 'MEDIUM' | 'HARD';
@@ -40,10 +42,23 @@ export interface DepartmentApproval {
   notes?: string;
 }
 
+export interface Act {
+    id: number;
+    title: string;
+    logline: string;
+}
+
+export interface Scene {
+    id: string;
+    act: number;
+    description: string;
+}
+
 export interface Shot {
-  id: string; // e.g., A01-S001-A
-  scene: string; // e.g., SCENE 001
-  shotNumber: string; // e.g., S001-A
+  id: string; 
+  act: number;
+  scene: string; 
+  shotNumber: string; 
   description: string;
   status: ShotStatus;
   complexity: ShotComplexity;
@@ -51,7 +66,6 @@ export interface Shot {
   location: string;
   tags?: string[];
   
-  // Enhanced Fields from Prompt
   shotType?: 'storyboard' | 'vfx' | 'animation';
   cameraAngle?: string;
   cameraMovement?: string;
@@ -60,10 +74,10 @@ export interface Shot {
   vfxRequired: boolean;
   animationRequired: boolean;
   audioNotes?: string;
-  complexityScore?: number; // 1-10
+  complexityScore?: number;
   
   prompts: ShotPrompt[];
-  approvals: DepartmentApproval[];
+  approvals: Record<Department, DepartmentApproval>;
   pipelineStage: PipelineStage;
   estimatedCost?: number;
   notes?: string;
