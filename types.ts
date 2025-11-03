@@ -1,23 +1,22 @@
+
 export enum View {
   DIRECTORS_ROOM = "Director's Room",
   WRITERS_ROOM = "Writer's Room",
   ART_DEPT = 'Digital Art Dept.',
-  CAMERA_DEPT = 'Camera & Lighting',
+  CAMERA_DEPT = 'Camera & Lighting Dept.',
   POST_PRODUCTION_SUITE = 'Post-Production Suite',
-
-  // Standalone tools
+  
+  // Standalone tools moved to sidebar sections but kept for routing
   PRODUCTION_OFFICE = 'Production Office',
   SHOT_DATABASE = 'Shot Database',
   CONTINUITY_VERIFIER = 'Continuity Verifier',
   ASSET_LIBRARY = 'Asset Library',
-  // FIX: Add PRODUCTION_AUDIT to the View enum
   PRODUCTION_AUDIT = 'Production Audit',
   
-  // Keep for internal routing if needed, but not in sidebar
+  // Hub for all tools
   TOOLS_HUB = 'Tools Hub',
 }
 
-// FIX: Add 'Storyboard Generated' to ShotStatus type
 export type ShotStatus = 'Not Started' | 'Pending Approval' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error' | 'Storyboard Generated';
 
 export type ShotComplexity = 'EASY' | 'MEDIUM' | 'HARD';
@@ -126,4 +125,10 @@ export interface Task {
   dueDate: string;
   status: TaskStatus;
   priority: TaskPriority;
+}
+
+export interface BudgetItem {
+  category: string;
+  planned: number;
+  actual: number;
 }

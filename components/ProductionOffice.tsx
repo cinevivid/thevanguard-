@@ -1,16 +1,20 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from './Card';
-import { FestivalEntry, Task, TaskPriority, TaskStatus } from '../types';
+// FIX: Add BudgetItem to import to support budget tracking props.
+import { FestivalEntry, Task, TaskPriority, TaskStatus, BudgetItem } from '../types';
 import { generatePressKitContent } from '../services/geminiService';
 
+// FIX: Add budget and setBudget to the component's props interface.
 interface ProductionOfficeProps {
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  budget: BudgetItem[];
+  setBudget: React.Dispatch<React.SetStateAction<BudgetItem[]>>;
 }
 
-const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks }) => {
-  const [activeTab, setActiveTab] = useState<'calendar' | 'festivals' | 'presskit'>('calendar');
+const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, budget, setBudget }) => {
+  // FIX: Add 'budget' as a possible active tab.
+  const [activeTab, setActiveTab] = useState<'calendar' | 'festivals' | 'presskit' | 'budget'>('calendar');
   const [festivals, setFestivals] = useState<FestivalEntry[]>(() => {
     const saved = localStorage.getItem('festivals');
     return saved ? JSON.parse(saved) : [
@@ -110,6 +114,8 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks }) 
         <button onClick={() => setActiveTab('calendar')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'calendar' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Production Tasks</button>
         <button onClick={() => setActiveTab('festivals')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'festivals' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Festival Tracker</button>
         <button onClick={() => setActiveTab('presskit')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'presskit' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Press Kit</button>
+        {/* FIX: Add 'Budget & Finance' tab. */}
+        <button onClick={() => setActiveTab('budget')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'budget' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Budget & Finance</button>
       </div>
 
       {activeTab === 'calendar' && (
@@ -195,6 +201,45 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks }) 
               {isPressKitLoading && <p>AI is assembling your press kit...</p>}
               {!isPressKitLoading && !pressKitContent && <p>Generated press kit content will appear here.</p>}
               <pre>{pressKitContent}</pre>
+          </div>
+        </Card>
+      )}
+
+      {/* FIX: Add budget tab content to display budget data passed in props. */}
+      {activeTab === 'budget' && (
+        <Card title="Film Budget Tracker" className="flex-1 flex flex-col">
+          <div className="overflow-y-auto flex-1">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-vanguard-bg-secondary">
+                <tr className="border-b border-vanguard-bg-tertiary">
+                  <th className="py-2 px-3">Category</th>
+                  <th className="py-2 px-3 text-right">Planned Cost</th>
+                  <th className="py-2 px-3 text-right">Actual Cost</th>
+                  <th className="py-2 px-3 text-right">Variance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {budget.map((item, index) => (
+                  <tr key={index} className="border-b border-vanguard-bg-tertiary">
+                    <td className="py-2 px-3 font-semibold">{item.category}</td>
+                    <td className="py-2 px-3 text-right">${item.planned.toLocaleString()}</td>
+                    <td className="py-2 px-3 text-right">${item.actual.toLocaleString()}</td>
+                    <td className={`py-2 px-3 text-right ${item.actual > item.planned ? 'text-vanguard-red' : 'text-vanguard-green'}`}>
+                      ${(item.actual - item.planned).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-vanguard-bg-tertiary font-bold bg-vanguard-bg-tertiary">
+                    <td className="py-3 px-3">TOTALS</td>
+                    <td className="py-3 px-3 text-right">${budget.reduce((sum, i) => sum + i.planned, 0).toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right">${budget.reduce((sum, i) => sum + i.actual, 0).toLocaleString()}</td>
+                    <td className={`py-3 px-3 text-right ${budget.reduce((sum, i) => sum + i.actual, 0) > budget.reduce((sum, i) => sum + i.planned, 0) ? 'text-vanguard-red' : 'text-vanguard-green'}`}>
+                      ${(budget.reduce((sum, i) => sum + i.actual, 0) - budget.reduce((sum, i) => sum + i.planned, 0)).toLocaleString()}
+                    </td>
+                </tr>
+              </tbody>
+            </table>
+            {budget.length === 0 && <p className="p-4 text-center text-vanguard-text-secondary">No budget items have been added yet.</p>}
           </div>
         </Card>
       )}

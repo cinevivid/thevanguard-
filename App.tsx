@@ -12,10 +12,9 @@ import ShotDatabaseManager from './components/ShotDatabaseManager';
 import ContinuityVerifier from './components/ContinuityVerifier';
 import AssetLibrary from './components/AssetLibrary';
 import ToolsHub from './components/ToolsHub';
-// FIX: Import ProductionAudit component
 import ProductionAudit from './components/ProductionAudit';
 
-import { View, Shot, TimelineTrack, Task } from './types';
+import { View, Shot, TimelineTrack, Task, BudgetItem } from './types';
 import { shotDatabase } from './data/shotDatabase';
 import { tasks as initialTasks } from './data/tasks';
 
@@ -68,6 +67,13 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : initialTasks;
   });
 
+  const [budget, setBudget] = useState<BudgetItem[]>(() => {
+    const saved = localStorage.getItem('budget');
+    // A default initial budget structure can be set here if needed
+    return saved ? JSON.parse(saved) : [];
+  });
+
+
   useEffect(() => { localStorage.setItem('lockedAssets', JSON.stringify(lockedAssets)); }, [lockedAssets]);
   useEffect(() => { localStorage.setItem('storyboardVariations', JSON.stringify(storyboardVariations)); }, [storyboardVariations]);
   useEffect(() => { localStorage.setItem('lockedStoryboard', JSON.stringify(lockedStoryboard)); }, [lockedStoryboard]);
@@ -76,35 +82,36 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('audioUrls', JSON.stringify(audioUrls)); }, [audioUrls]);
   useEffect(() => { localStorage.setItem('timeline', JSON.stringify(timeline)); }, [timeline]);
   useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
+  useEffect(() => { localStorage.setItem('budget', JSON.stringify(budget)); }, [budget]);
+
 
   const renderView = () => {
+    const commonProps = { shots, setShots, setCurrentView };
     switch (currentView) {
       case View.DIRECTORS_ROOM:
-        return <DirectorsRoom shots={shots} setShots={setShots} storyboardVariations={storyboardVariations} setLockedStoryboard={setLockedStoryboard} setCurrentView={setCurrentView} />;
+        return <DirectorsRoom {...commonProps} storyboardVariations={storyboardVariations} setLockedStoryboard={setLockedStoryboard} />;
       case View.WRITERS_ROOM:
         return <WritersRoom />;
       case View.ART_DEPT:
-        return <ArtDept shots={shots} setShots={setShots} lockedAssets={lockedAssets} setLockedAssets={setLockedAssets} setStoryboardVariations={setStoryboardVariations} />;
+        return <ArtDept {...commonProps} lockedAssets={lockedAssets} setLockedAssets={setLockedAssets} storyboardVariations={storyboardVariations} setStoryboardVariations={setStoryboardVariations} setLockedStoryboard={setLockedStoryboard} />;
       case View.CAMERA_DEPT:
-        return <CameraDept shots={shots} lockedStoryboard={lockedStoryboard} />;
+        return <CameraDept {...commonProps} lockedStoryboard={lockedStoryboard} />;
       case View.POST_PRODUCTION_SUITE:
-        // FIX: Pass missing setShots and setGeneratedVideos props to PostProductionSuite
-        return <PostProductionSuite shots={shots} setShots={setShots} lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} setGeneratedVideos={setGeneratedVideos} audioUrls={audioUrls} setAudioUrls={setAudioUrls} timeline={timeline} setTimeline={setTimeline} setCurrentView={setCurrentView} />;
+        return <PostProductionSuite {...commonProps} lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} setGeneratedVideos={setGeneratedVideos} audioUrls={audioUrls} setAudioUrls={setAudioUrls} timeline={timeline} setTimeline={setTimeline} />;
       case View.PRODUCTION_OFFICE:
-        return <ProductionOffice tasks={tasks} setTasks={setTasks} />;
+        return <ProductionOffice tasks={tasks} setTasks={setTasks} budget={budget} setBudget={setBudget} />;
       case View.SHOT_DATABASE:
-        return <ShotDatabaseManager shots={shots} setShots={setShots} />;
+        return <ShotDatabaseManager {...commonProps} />;
       case View.CONTINUITY_VERIFIER:
-        return <ContinuityVerifier shots={shots} lockedStoryboard={lockedStoryboard} />;
+        return <ContinuityVerifier {...commonProps} lockedStoryboard={lockedStoryboard} />;
       case View.ASSET_LIBRARY:
-        return <AssetLibrary lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} shots={shots} />;
+        return <AssetLibrary {...commonProps} lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} />;
        case View.TOOLS_HUB:
         return <ToolsHub setCurrentView={setCurrentView} />;
-      // FIX: Add case for Production Audit view
       case View.PRODUCTION_AUDIT:
         return <ProductionAudit shots={shots} />;
       default:
-        return <DirectorsRoom shots={shots} setShots={setShots} storyboardVariations={storyboardVariations} setLockedStoryboard={setLockedStoryboard} setCurrentView={setCurrentView} />;
+        return <DirectorsRoom {...commonProps} storyboardVariations={storyboardVariations} setLockedStoryboard={setLockedStoryboard} />;
     }
   };
 

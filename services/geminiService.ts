@@ -1,9 +1,10 @@
+
 import { GoogleGenAI, Modality, Part } from "@google/genai";
 import { screenplay } from '../data/screenplay';
 import { visualLookbook } from '../data/visualLookbook';
 import { productionCalendar } from '../data/productionCalendar';
 import { consistencyFormula } from '../data/consistencyFormula';
-import { Shot, EmotionalArcPoint, PacingPoint } from "../types";
+import { Shot, EmotionalArcPoint, PacingPoint, TimelineClip } from "../types";
 import { pitchDeck } from "../data/pitchDeck";
 import { shotDatabase as allShots } from "../data/shotDatabase";
 
@@ -828,21 +829,49 @@ export const generatePropConcept = async (description: string): Promise<string[]
     throw new Error("No image data found in response");
   };
   try {
-    return await Promise.all(Array(4).fill(0).map(() => generateSingleImage()));
+    const imagePromises = Array(4).fill(0).map(() => generateSingleImage());
+    return await Promise.all(imagePromises.filter(p => p !== null) as Promise<string>[]);
   } catch (error) {
     console.error("Error generating prop concepts:", error);
     return [];
   }
 };
 
+
 export async function* generateAmbientAudio(prompt: string): AsyncGenerator<string> {
     const ai = getAiClient();
-    const fullPrompt = `You are an AI Sound Designer. Generate a 60-second seamless loop of an ambient soundscape based on the following description: "${prompt}". Provide the output as a base64 encoded WAV file.
+    const fullPrompt = `You are an AI Sound Designer. Generate a 60-second seamless loop of an ambient soundscape based on the following description: "${prompt}".
     
     **For this simulation, describe the soundscape in detail instead of generating audio.** Include layers, specific sounds, and overall mood.
     `;
     try {
-        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: fullPrompt }] }] });
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
         for await (const chunk of response) { yield chunk.text; }
     } catch (e) { yield "### AI Error: Could not generate ambient audio description."; }
+}
+
+export async function* analyzePacingOfClips(clips: TimelineClip[]): AsyncGenerator<string> {
+    const ai = getAiClient();
+    const clipData = clips.map(c => ({ id: c.shot?.id, duration: c.duration, description: c.shot?.description }));
+    const prompt = `You are an AI Editor and Pacing Assistant. Analyze the following sequence of video clips from a scene's rough cut. Compare the pacing (average shot length) against the analysis from the Pacing Visualizer and the script's intent. Highlight sections that may be dragging or rushed.
+
+    **CONTEXT:**
+    ---
+    **PACING ANALYSIS FROM SCRIPT:**
+    (The AI would normally have access to the pacing visualizer data here, but for now, we'll use the script)
+    ${screenplay}
+    ---
+    **CLIP DATA (JSON):**
+    ${JSON.stringify(clipData, null, 2)}
+    ---
+
+    **INSTRUCTIONS:**
+    1. Calculate the Average Shot Length (ASL) for this sequence.
+    2. Based on the script context, determine if this pacing is appropriate.
+    3. Provide a short, actionable critique. For example: "The ASL is 5.2s, which feels slow for an action sequence. Consider trimming 1-2 seconds from the establishing shot."
+    `;
+    try {
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+        for await (const chunk of response) { yield chunk.text; }
+    } catch (e) { yield "### AI Error: Could not analyze clip pacing."; }
 }
