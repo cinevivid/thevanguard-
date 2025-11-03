@@ -10,7 +10,7 @@ import { generatePropConcept } from '../services/geminiService';
 
 interface ArtDeptProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  setShots: (updatedShots: Shot[]) => void;
   lockedAssets: Record<string, string | null>;
   setLockedAssets: React.Dispatch<React.SetStateAction<Record<string, string | null>>>;
   storyboardVariations: Record<string, string[]>;

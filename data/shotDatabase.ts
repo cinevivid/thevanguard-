@@ -1,4 +1,5 @@
 
+
 import { shotListDatabase as rawShotlist } from './shotListDatabase';
 import { Shot, ShotStatus, ShotComplexity, PipelineStage, DepartmentApproval, ShotPrompt, Department } from '../types';
 
@@ -20,7 +21,9 @@ function parseShotlist(): Shot[] {
             const id = parts[2];
             if (!id || !id.includes('-S')) continue; // Skip header/malformed lines
 
+            // FIX: Parse act number from the shot ID and add it to the shot object.
             const [_act, sceneNum, shotLetter] = id.split('-');
+            const actNum = parseInt(_act.replace('A', ''), 10);
             const status = parts[4] === '✅ DETAILED' ? 'Not Started' : 'Not Started'; // Default status
             const vfxRequired = parts[3].toLowerCase().includes('vfx') || parts[6].toLowerCase().includes('vfx');
             const animationRequired = parts[3].toLowerCase().includes('animation');
@@ -35,6 +38,7 @@ function parseShotlist(): Shot[] {
 
             const shot: Shot = {
                 id: id,
+                act: actNum,
                 scene: `SCENE ${sceneNum.replace('S','')}`,
                 shotNumber: `${sceneNum}-${shotLetter}`,
                 description: parts[3],

@@ -7,7 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 
 interface VideoGeneratorProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  setShots: (updatedShots: Shot[]) => void;
   lockedStoryboard: Record<string, string>;
   generatedVideos: Record<string, string>;
   setGeneratedVideos: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -120,7 +120,9 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ shots, setShots, locked
               for await (const tagChunk of tagStream) {
                 tags = tags.concat(tagChunk);
               }
-              setShots(prev => prev.map(s => s.id === selectedShotId ? { ...s, status: 'Video Complete', tags } : s));
+              // FIX: The status property must be of type ShotStatus. Cast the string literal to ShotStatus to satisfy TypeScript's type checker.
+              const newShots = shots.map(s => s.id === selectedShotId ? { ...s, status: 'Video Complete' as ShotStatus, tags } : s);
+              setShots(newShots);
 
               setIsLoading(false);
               setStatusMessage('Video generated successfully!');

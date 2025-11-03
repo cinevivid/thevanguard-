@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Modality, Part } from "@google/genai";
 import { screenplay } from '../data/screenplay';
 import { visualLookbook } from '../data/visualLookbook';
@@ -351,7 +350,7 @@ export const getDashboardData = async (shots: Shot[]): Promise<{shootList: strin
     } catch (error: any) {
         console.error("Error generating dashboard data:", error);
         if (error.message && (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED'))) {
-             throw new Error("API quota exceeded for Gemini 2.5 Pro. This may be a daily or per-minute limit. Please wait and try again, or check your billing details.");
+             throw new Error("API quota exceeded. This may be a daily or per-minute limit. Please wait and try again, or check your billing details.");
         }
         throw new Error("Could not generate dashboard data. Please check the console.");
     }
@@ -875,4 +874,62 @@ export async function* analyzePacingOfClips(clips: TimelineClip[]): AsyncGenerat
         const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
         for await (const chunk of response) { yield chunk.text; }
     } catch (e) { yield "### AI Error: Could not analyze clip pacing."; }
+}
+
+export async function* getAIBrainTrustReview(shot: Shot, imageBase64: string): AsyncGenerator<{ expert: string, review: string }> {
+    const ai = getAiClient();
+    const experts = [
+        { name: 'director', persona: "You are a director with 30 years experience. You've won Oscars. You care about: Does this serve the story? Are character motivations clear? Does it emotionally land?" },
+        { name: 'cinematographer', persona: "You are Roger Deakins. You care about: Is the lighting motivated? Does composition serve the emotion? Are camera movements justified?" },
+        { name: 'editor', persona: "You are a film editor who's cut multiple Oscar-winners. You care about: Does this scene have proper pacing? Are there enough coverage options? Will this cut together smoothly?"},
+        { name: 'audience_proxy', persona: "You are a regular moviegoer. You care about: Am I confused? Am I bored? Do I care about the characters?" }
+    ];
+
+    for (const expert of experts) {
+        const prompt = `${expert.persona}
+        
+        Review this single shot from the film "THE VANGUARD".
+        
+        **SHOT DETAILS:**
+        - ID: ${shot.id}
+        - Description: ${shot.description}
+
+        **INSTRUCTIONS:**
+        Provide a 1-2 sentence critique from your expert perspective. Be honest but constructive. What works? What doesn't?
+        `;
+
+        try {
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-pro",
+                contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: imageBase64 } }] }],
+            });
+            yield { expert: expert.name, review: response.text };
+        } catch (error) {
+            console.error(`Error with ${expert.name} review:`, error);
+            yield { expert: expert.name, review: "Error generating review." };
+        }
+    }
+}
+
+export async function* getStoryDNA(): AsyncGenerator<string> {
+    const ai = getAiClient();
+    const prompt = `Analyze the provided screenplay for "THE VANGUARD" and extract its core "Story DNA".
+
+    **INSTRUCTIONS:**
+    1.  **Themes:** Identify the 3-4 core themes (e.g., inevitability, sacrifice, generational trauma).
+    2.  **Motifs:** List the key recurring visual motifs (e.g., purple flowers, clocks, reflections).
+    3.  **Causality Graph:** Briefly describe the central causal loop of the story (e.g., Duncan's actions create the future that sends Victor back to stop him).
+    4.  **Story Physics:** Explain the rules of time travel in this universe.
+
+    Format the output as clean, professional markdown.
+    
+    ---
+    **SCREENPLAY:**
+    ${screenplay}
+    ---
+    `;
+     try {
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+        for await (const chunk of response) { yield chunk.text; }
+    } catch (e) { yield "### AI Error: Could not analyze Story DNA."; }
 }

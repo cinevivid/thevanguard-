@@ -1,20 +1,16 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from './Card';
-// FIX: Add BudgetItem to import to support budget tracking props.
 import { FestivalEntry, Task, TaskPriority, TaskStatus, BudgetItem } from '../types';
 import { generatePressKitContent } from '../services/geminiService';
 
-// FIX: Add budget and setBudget to the component's props interface.
 interface ProductionOfficeProps {
   tasks: Task[];
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  updateTask: (task: Task) => void;
   budget: BudgetItem[];
-  setBudget: React.Dispatch<React.SetStateAction<BudgetItem[]>>;
+  updateBudget: (budget: BudgetItem) => void;
 }
 
-const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, budget, setBudget }) => {
-  // FIX: Add 'budget' as a possible active tab.
+const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, updateTask, budget, updateBudget }) => {
   const [activeTab, setActiveTab] = useState<'calendar' | 'festivals' | 'presskit' | 'budget'>('calendar');
   const [festivals, setFestivals] = useState<FestivalEntry[]>(() => {
     const saved = localStorage.getItem('festivals');
@@ -58,14 +54,9 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, bu
       });
   }, [tasks, filterStatus, filterPriority, sortKey, sortDirection]);
 
-  const toggleTaskStatus = (taskId: number) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === taskId
-          ? { ...task, status: task.status === 'Complete' ? 'Incomplete' : 'Complete' }
-          : task
-      )
-    );
+  const toggleTaskStatus = (taskToUpdate: Task) => {
+    const newStatus = taskToUpdate.status === 'Complete' ? 'Incomplete' : 'Complete';
+    updateTask({ ...taskToUpdate, status: newStatus });
   };
 
   const handleGenerateEPK = async () => {
@@ -115,7 +106,6 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, bu
         <button onClick={() => setActiveTab('calendar')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'calendar' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Production Tasks</button>
         <button onClick={() => setActiveTab('festivals')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'festivals' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Festival Tracker</button>
         <button onClick={() => setActiveTab('presskit')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'presskit' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Press Kit</button>
-        {/* FIX: Add 'Budget & Finance' tab. */}
         <button onClick={() => setActiveTab('budget')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'budget' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Budget & Finance</button>
       </div>
 
@@ -150,7 +140,7 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, bu
             <ul className="space-y-2 p-4">
               {sortedAndFilteredTasks.map((task) => (
                 <li key={task.id} className={`flex items-center space-x-3 p-3 bg-vanguard-bg-tertiary rounded-md border-l-4 ${priorityColors[task.priority]} transition-all duration-300 ${task.status === 'Complete' ? 'opacity-50' : ''}`}>
-                  <input type="checkbox" checked={task.status === 'Complete'} onChange={() => toggleTaskStatus(task.id)} className="form-checkbox h-5 w-5 bg-vanguard-bg border-vanguard-bg-tertiary text-vanguard-accent rounded focus:ring-vanguard-accent" />
+                  <input type="checkbox" checked={task.status === 'Complete'} onChange={() => toggleTaskStatus(task)} className="form-checkbox h-5 w-5 bg-vanguard-bg border-vanguard-bg-tertiary text-vanguard-accent rounded focus:ring-vanguard-accent" />
                   <div className="flex-1">
                     <p className={`text-sm ${task.status === 'Complete' ? 'line-through' : ''}`}>{task.description}</p>
                     <p className="text-xs text-vanguard-text-secondary">{task.dueDate}</p>
@@ -205,8 +195,7 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks, bu
           </div>
         </Card>
       )}
-
-      {/* FIX: Add budget tab content to display budget data passed in props. */}
+      
       {activeTab === 'budget' && (
         <Card title="Film Budget Tracker" className="flex-1 flex flex-col">
           <div className="overflow-y-auto flex-1">

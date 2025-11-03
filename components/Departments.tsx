@@ -1,11 +1,13 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Shot, Department, ApprovalStatus } from '../types';
 import Card from './Card';
 
 interface DepartmentsProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  // FIX: Corrected prop type to reflect that it's a function that takes an array, not a React state dispatcher.
+  setShots: (updatedShots: Shot[]) => void;
 }
 
 const Departments: React.FC<DepartmentsProps> = ({ shots, setShots }) => {
@@ -19,7 +21,8 @@ const Departments: React.FC<DepartmentsProps> = ({ shots, setShots }) => {
   }, [shots, activeDept]);
   
   const handleSetApproval = (shotId: string, status: ApprovalStatus) => {
-    setShots(prevShots => prevShots.map(shot => {
+    // FIX: Refactored to not use functional update for `setShots` and to correctly create the new shots array.
+    const newShots = shots.map(shot => {
       if (shot.id === shotId) {
         return {
           ...shot,
@@ -30,7 +33,8 @@ const Departments: React.FC<DepartmentsProps> = ({ shots, setShots }) => {
         };
       }
       return shot;
-    }));
+    });
+    setShots(newShots);
   };
 
   const getStatusColor = (status: ApprovalStatus) => {

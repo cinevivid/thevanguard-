@@ -1,11 +1,12 @@
 
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Card from './Card';
 import { Shot, ShotStatus } from '../types';
 
 interface DirectorsApprovalQueueProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  setShots: (updatedShots: Shot[]) => void;
   storyboardVariations: Record<string, string[]>;
   setLockedStoryboard: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
@@ -34,12 +35,14 @@ const DirectorsApprovalQueue: React.FC<DirectorsApprovalQueueProps> = ({ shots, 
   const handleApprove = () => {
     if (!selectedShot || !selectedTake) return;
     setLockedStoryboard(prev => ({ ...prev, [selectedShot.id]: selectedTake! }));
-    setShots(prev => prev.map(s => s.id === selectedShot.id ? { ...s, status: 'Storyboard Locked' } : s));
+    // FIX: The status property must be of type ShotStatus. Cast the string literal to ShotStatus to satisfy TypeScript's type checker.
+    setShots(shots.map(s => s.id === selectedShot.id ? { ...s, status: 'Storyboard Locked' as ShotStatus } : s));
   };
   
   const handleRevision = () => {
     if (!selectedShot) return;
-    setShots(prev => prev.map(s => s.id === selectedShot.id ? { ...s, status: 'Not Started' } : s));
+    // FIX: The status property must be of type ShotStatus. Cast the string literal to ShotStatus to satisfy TypeScript's type checker.
+    setShots(shots.map(s => s.id === selectedShot.id ? { ...s, status: 'Not Started' as ShotStatus } : s));
   };
   
   const variations = selectedShot ? storyboardVariations[selectedShot.id] || [] : [];

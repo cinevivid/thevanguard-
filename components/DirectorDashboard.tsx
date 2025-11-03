@@ -47,7 +47,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
     return { total, completed, percentage, statusCounts };
   }, [shots]);
 
-  // FIX: Changed 'Pending Review' to 'Pending Approval' to match the ShotStatus type.
+  // FIX: Added 'Storyboard Generated' status and changed 'Pending Review' to 'Pending Approval' to align with the ShotStatus type.
   const statusColors: Record<ShotStatus, string> = {
     'Not Started': 'bg-vanguard-text-secondary',
     'Storyboard Generated': 'bg-yellow-500',

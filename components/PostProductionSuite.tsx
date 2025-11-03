@@ -12,7 +12,7 @@ import Card from './Card';
 
 interface PostProductionSuiteProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  setShots: (updatedShots: Shot[]) => void;
   lockedStoryboard: Record<string, string>;
   generatedVideos: Record<string, string>;
   setGeneratedVideos: React.Dispatch<React.SetStateAction<Record<string, string>>>;

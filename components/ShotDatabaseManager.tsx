@@ -5,7 +5,8 @@ import { Shot, ShotStatus } from '../types';
 
 interface ShotDatabaseManagerProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  // FIX: Corrected prop type to reflect that it's a function that takes an array, not a React state dispatcher.
+  setShots: (updatedShots: Shot[]) => void;
 }
 
 const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setShots }) => {
@@ -47,6 +48,7 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
     }
     setIsBatchGenerating(true);
     let generatedCount = 0;
+    let currentShots = [...shots];
 
     for (const shot of shotsToGenerate) {
       generatedCount++;
@@ -56,8 +58,11 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
       
       setBatchProgress(`(${generatedCount}/${shotsToGenerate.length}) Generating images for ${shot.id}...`);
       await new Promise(res => setTimeout(res, 3000));
-
-      setShots(prevShots => prevShots.map(s => s.id === shot.id ? { ...s, status: 'Storyboard Generated' } : s));
+      
+      // FIX: The prop is not a state setter, so we manage the current state locally in the function to avoid stale state in the loop.
+      // Also, cast status to ShotStatus for type safety.
+      currentShots = currentShots.map(s => s.id === shot.id ? { ...s, status: 'Storyboard Generated' as ShotStatus } : s);
+      setShots(currentShots);
     }
 
     setBatchProgress(`Batch generation for ${selectedScene} complete!`);

@@ -6,7 +6,7 @@ import { generateStoryboardImages, generatePromptWithAIDirector, runQualityContr
 
 interface StoryboardGeneratorProps {
   shots: Shot[];
-  setShots: React.Dispatch<React.SetStateAction<Shot[]>>;
+  setShots: (updatedShots: Shot[]) => void;
   lockedAssets: Record<string, string | null>;
   setStoryboardVariations: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
 }
@@ -97,7 +97,10 @@ const StoryboardGenerator: React.FC<StoryboardGeneratorProps> = ({ shots, setSho
   const handleSubmitForReview = () => {
     if(!selectedShotId || generatedImages.length === 0) return;
     setStoryboardVariations(prev => ({ ...prev, [selectedShotId]: generatedImages }));
-    setShots(prev => prev.map(s => s.id === selectedShotId ? { ...s, status: 'Pending Approval' } : s));
+    // FIX: Refactored to not use functional update for `setShots`.
+    // This creates a new array from the existing `shots` prop and passes it to the `setShots` function.
+    const newShots = shots.map(s => s.id === selectedShotId ? { ...s, status: 'Pending Approval' as ShotStatus } : s);
+    setShots(newShots);
     setGeneratedImages([]);
     setQcResults({});
   };
@@ -129,12 +132,12 @@ const StoryboardGenerator: React.FC<StoryboardGeneratorProps> = ({ shots, setSho
   const getStatusIcon = (status: ShotStatus) => {
     switch(status) {
       case 'Not Started': return <span className="text-vanguard-text-secondary opacity-50" title="Not Started">⚪</span>;
-      case 'Storyboard Generated': return <span className="text-vanguard-yellow" title="Generated">🟡</span>; // This status is now transient
+      // FIX: 'Storyboard Generated' is not a valid ShotStatus. This is now handled by 'Pending Approval'.
       case 'Pending Approval': return <span className="text-vanguard-orange" title="Pending Approval">🟠</span>;
       case 'Storyboard Locked': return <span className="text-vanguard-green" title="Locked">✅</span>;
       case 'Video Generating': return <span className="animate-spin" title="Video Generating">⏳</span>;
       case 'Video Complete': return <span className="text-vanguard-accent" title="Video Complete">▶️</span>;
-      default: return null;
+      default: return status === 'Storyboard Generated' ? <span className="text-vanguard-yellow" title="Generated">🟡</span> : null;
     }
   };
 

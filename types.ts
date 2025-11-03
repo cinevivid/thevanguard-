@@ -1,25 +1,47 @@
 
 export enum View {
+  // Department Hubs
   DIRECTORS_ROOM = "Director's Room",
   WRITERS_ROOM = "Writer's Room",
   ART_DEPT = 'Digital Art Dept.',
   CAMERA_DEPT = 'Camera & Lighting Dept.',
   POST_PRODUCTION_SUITE = 'Post-Production Suite',
   
-  // Standalone/Legacy tools
+  // Standalone Tools & Pages (accessible from hubs or Tools Hub)
   PRODUCTION_OFFICE = 'Production Office',
   SHOT_DATABASE = 'Shot Database',
   CONTINUITY_VERIFIER = 'Continuity Verifier',
+  SHOT_COMPOSITION_VALIDATOR = "DP's Validator",
   ASSET_LIBRARY = 'Asset Library',
   PRODUCTION_AUDIT = 'Production Audit',
-  DEPARTMENTS = 'Departments',
-  
-  // Hub for all tools
   TOOLS_HUB = 'Tools Hub',
+  DIRECTORS_APPROVAL_QUEUE = "Director's Approval Queue",
+  
+  // Art Dept Tools
+  LOOK_DEV_LAB = 'Look Dev Lab',
+  AI_CASTING_STUDIO = 'AI Casting Studio',
+  CANONICAL_ASSETS = 'Canonical Assets',
+  STORYBOARD_GENERATOR = 'Storyboard Generator',
+  
+  // Post-Production Tools
+  VIDEO_GENERATOR = 'Video Generation',
+  AUDIO_PRODUCTION = 'Audio Production',
+  EDIT_BAY = 'Edit Bay',
+  COLOR_VFX_HUB = 'Color & VFX Hub',
+  TRAILER_GENERATOR = 'Trailer Generator',
+
+  // Analysis Tools (part of Writer's Room but directly accessible)
+  SCRIPT_ANALYSIS = 'Script Analysis',
+  SCRIPT_BREAKDOWN = 'Script Breakdown',
+  EMOTIONAL_ARCHITECTURE = 'Emotional Architecture',
+  PACING_RHYTHM = 'Pacing & Rhythm',
+  
+  // System
+  API_KEYS = 'API Keys & Services',
 }
 
-// FIX: Removed duplicate 'Storyboard Generated' and legacy 'Pending Review' to create a single source of truth for shot statuses.
-export type ShotStatus = 'Not Started' | 'Pending Approval' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error' | 'Storyboard Generated';
+// FIX: Add 'Storyboard Generated' as a valid shot status.
+export type ShotStatus = 'Not Started' | 'Pending Approval' | 'Storyboard Generated' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error';
 
 export type ShotComplexity = 'EASY' | 'MEDIUM' | 'HARD';
 export type Department = 'director' | 'cinematography' | 'vfx' | 'sound';
