@@ -1,40 +1,34 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import CorpusAssistant from './components/CorpusAssistant';
-import CanonicalAssets from './components/CanonicalAssets';
-import StoryboardGenerator from './components/StoryboardGenerator';
-import VideoGenerator from './components/VideoGenerator';
-import ShotDatabaseManager from './components/ShotDatabaseManager';
-import ScriptBreakdown from './components/ScriptBreakdown';
-import AudioProduction from './components/AudioProduction';
-import EditBay from './components/EditBay';
-import DirectorDashboard from './components/DirectorDashboard';
-import ToolsHub from './components/ToolsHub';
-import EmotionalArchitecture from './components/EmotionalArchitecture';
-import VisualStorytelling from './components/VisualStorytelling';
-import PacingRhythm from './components/PacingRhythm';
-import ScriptAnalysis from './components/ScriptAnalysis';
-import ContinuityChecker from './components/ContinuityChecker';
-import DocumentManager from './components/DocumentManager';
-import LookDevLab from './components/LookDevLab';
-import ColorVFXHub from './components/ColorVFXHub';
+import DirectorsRoom from './components/DirectorsRoom';
+import WritersRoom from './components/WritersRoom';
+import ArtDept from './components/ArtDept';
+import CameraDept from './components/CameraDept';
+import PostProductionSuite from './components/PostProductionSuite';
 import ProductionOffice from './components/ProductionOffice';
+import ShotDatabaseManager from './components/ShotDatabaseManager';
+import ContinuityVerifier from './components/ContinuityVerifier';
 import AssetLibrary from './components/AssetLibrary';
-import TrailerGenerator from './components/TrailerGenerator';
-import AICastingStudio from './components/AICastingStudio';
-import EmotionalArcVisualizer from './components/EmotionalArcVisualizer';
-import PacingVisualizer from './components/PacingVisualizer';
-import ShotCompositionValidator from './components/ShotCompositionValidator';
+import ToolsHub from './components/ToolsHub';
+// FIX: Import ProductionAudit component
+import ProductionAudit from './components/ProductionAudit';
 
-import { View, Shot, TimelineTrack } from './types';
+import { View, Shot, TimelineTrack, Task } from './types';
 import { shotDatabase } from './data/shotDatabase';
+import { tasks as initialTasks } from './data/tasks';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>(View.DIRECTOR_DASHBOARD);
+  const [currentView, setCurrentView] = useState<View>(View.DIRECTORS_ROOM);
   
   const [lockedAssets, setLockedAssets] = useState<Record<string, string | null>>(() => {
     const saved = localStorage.getItem('lockedAssets');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [storyboardVariations, setStoryboardVariations] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('storyboardVariations');
     return saved ? JSON.parse(saved) : {};
   });
 
@@ -64,90 +58,53 @@ const App: React.FC = () => {
       { id: 'video', name: 'Video', clips: [] },
       { id: 'dialogue', name: 'Dialogue', clips: [] },
       { id: 'sfx', name: 'SFX', clips: [] },
+      { id: 'ambience', name: 'Ambience', clips: [] },
       { id: 'music', name: 'Music', clips: [] },
     ];
   });
 
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem('tasks');
+    return saved ? JSON.parse(saved) : initialTasks;
+  });
 
-  useEffect(() => {
-    localStorage.setItem('lockedAssets', JSON.stringify(lockedAssets));
-  }, [lockedAssets]);
-
-  useEffect(() => {
-    localStorage.setItem('lockedStoryboard', JSON.stringify(lockedStoryboard));
-  }, [lockedStoryboard]);
-
-  useEffect(() => {
-    localStorage.setItem('generatedVideos', JSON.stringify(generatedVideos));
-  }, [generatedVideos]);
-  
-  useEffect(() => {
-    localStorage.setItem('shots', JSON.stringify(shots));
-  }, [shots]);
-
-  useEffect(() => {
-    localStorage.setItem('audioUrls', JSON.stringify(audioUrls));
-  }, [audioUrls]);
-
-  useEffect(() => {
-    localStorage.setItem('timeline', JSON.stringify(timeline));
-  }, [timeline]);
-
+  useEffect(() => { localStorage.setItem('lockedAssets', JSON.stringify(lockedAssets)); }, [lockedAssets]);
+  useEffect(() => { localStorage.setItem('storyboardVariations', JSON.stringify(storyboardVariations)); }, [storyboardVariations]);
+  useEffect(() => { localStorage.setItem('lockedStoryboard', JSON.stringify(lockedStoryboard)); }, [lockedStoryboard]);
+  useEffect(() => { localStorage.setItem('generatedVideos', JSON.stringify(generatedVideos)); }, [generatedVideos]);
+  useEffect(() => { localStorage.setItem('shots', JSON.stringify(shots)); }, [shots]);
+  useEffect(() => { localStorage.setItem('audioUrls', JSON.stringify(audioUrls)); }, [audioUrls]);
+  useEffect(() => { localStorage.setItem('timeline', JSON.stringify(timeline)); }, [timeline]);
+  useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
 
   const renderView = () => {
     switch (currentView) {
-      case View.DIRECTOR_DASHBOARD:
-        return <DirectorDashboard shots={shots} setCurrentView={setCurrentView} />;
-      case View.TOOLS_HUB:
-        return <ToolsHub setCurrentView={setCurrentView} />;
+      case View.DIRECTORS_ROOM:
+        return <DirectorsRoom shots={shots} setShots={setShots} storyboardVariations={storyboardVariations} setLockedStoryboard={setLockedStoryboard} setCurrentView={setCurrentView} />;
+      case View.WRITERS_ROOM:
+        return <WritersRoom />;
+      case View.ART_DEPT:
+        return <ArtDept shots={shots} setShots={setShots} lockedAssets={lockedAssets} setLockedAssets={setLockedAssets} setStoryboardVariations={setStoryboardVariations} />;
+      case View.CAMERA_DEPT:
+        return <CameraDept shots={shots} lockedStoryboard={lockedStoryboard} />;
+      case View.POST_PRODUCTION_SUITE:
+        // FIX: Pass missing setShots and setGeneratedVideos props to PostProductionSuite
+        return <PostProductionSuite shots={shots} setShots={setShots} lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} setGeneratedVideos={setGeneratedVideos} audioUrls={audioUrls} setAudioUrls={setAudioUrls} timeline={timeline} setTimeline={setTimeline} setCurrentView={setCurrentView} />;
       case View.PRODUCTION_OFFICE:
-        return <ProductionOffice shots={shots} />;
-      case View.EMOTIONAL_ARCHITECTURE:
-        return <EmotionalArchitecture />;
-      case View.VISUAL_STORYTELLING:
-        return <VisualStorytelling />;
-      case View.PACING_RHYTHM:
-        return <PacingRhythm />;
-      case View.SCRIPT_ANALYSIS:
-        return <ScriptAnalysis />;
-      case View.CONTINUITY_CHECKER:
-        return <ContinuityChecker />;
-      case View.DOCUMENT_MANAGER:
-        return <DocumentManager />;
+        return <ProductionOffice tasks={tasks} setTasks={setTasks} />;
       case View.SHOT_DATABASE:
         return <ShotDatabaseManager shots={shots} setShots={setShots} />;
-      case View.SCRIPT_BREAKDOWN:
-        return <ScriptBreakdown />;
-      case View.LOOK_DEV_LAB:
-        return <LookDevLab />;
-      case View.AI_CASTING_STUDIO:
-        return <AICastingStudio />;
-      case View.CORPUS_ASSISTANT:
-        return <CorpusAssistant />;
-      case View.CANONICAL_ASSETS:
-        return <CanonicalAssets lockedAssets={lockedAssets} setLockedAssets={setLockedAssets} />;
-      case View.STORYBOARD_GENERATOR:
-        return <StoryboardGenerator shots={shots} setShots={setShots} lockedAssets={lockedAssets} lockedStoryboard={lockedStoryboard} setLockedStoryboard={setLockedStoryboard} />;
-      case View.SHOT_COMPOSITION_VALIDATOR:
-        return <ShotCompositionValidator shots={shots} lockedStoryboard={lockedStoryboard} />;
-      case View.VIDEO_GENERATOR:
-        return <VideoGenerator shots={shots} setShots={setShots} lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} setGeneratedVideos={setGeneratedVideos} />;
-      case View.AUDIO_PRODUCTION:
-        return <AudioProduction audioUrls={audioUrls} setAudioUrls={setAudioUrls} />;
-      case View.COLOR_VFX_HUB:
-        return <ColorVFXHub shots={shots} lockedStoryboard={lockedStoryboard} />;
-      case View.EDIT_BAY:
-        return <EditBay shots={shots} generatedVideos={generatedVideos} audioUrls={audioUrls} timeline={timeline} setTimeline={setTimeline} />;
+      case View.CONTINUITY_VERIFIER:
+        return <ContinuityVerifier shots={shots} lockedStoryboard={lockedStoryboard} />;
       case View.ASSET_LIBRARY:
         return <AssetLibrary lockedStoryboard={lockedStoryboard} generatedVideos={generatedVideos} shots={shots} />;
-      case View.TRAILER_GENERATOR:
-        return <TrailerGenerator shots={shots} generatedVideos={generatedVideos} setTimeline={setTimeline} setCurrentView={setCurrentView} />;
-      case View.EMOTIONAL_ARC_VISUALIZER:
-        return <EmotionalArcVisualizer />;
-      case View.PACING_VISUALIZER:
-        return <PacingVisualizer />;
+       case View.TOOLS_HUB:
+        return <ToolsHub setCurrentView={setCurrentView} />;
+      // FIX: Add case for Production Audit view
+      case View.PRODUCTION_AUDIT:
+        return <ProductionAudit shots={shots} />;
       default:
-        return <DirectorDashboard shots={shots} setCurrentView={setCurrentView} />;
+        return <DirectorsRoom shots={shots} setShots={setShots} storyboardVariations={storyboardVariations} setLockedStoryboard={setLockedStoryboard} setCurrentView={setCurrentView} />;
     }
   };
 

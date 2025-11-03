@@ -1,5 +1,5 @@
 import { shotListDatabase as rawShotlist } from './shotListDatabase';
-import { Shot, ShotStatus, ShotComplexity, PipelineStage } from '../types';
+import { Shot, ShotStatus, ShotComplexity, PipelineStage, DepartmentApproval, ShotPrompt } from '../types';
 
 function parseShotlist(): Shot[] {
   const lines = rawShotlist.split('\n');
@@ -20,37 +20,37 @@ function parseShotlist(): Shot[] {
             if (!id || !id.includes('-S')) continue; // Skip header/malformed lines
 
             const [_act, sceneNum, shotLetter] = id.split('-');
-            
+            const status = parts[4] === '✅ DETAILED' ? 'Not Started' : 'Not Started'; // Default status
             const vfxRequired = parts[3].toLowerCase().includes('vfx') || parts[6].toLowerCase().includes('vfx');
+            const animationRequired = parts[3].toLowerCase().includes('animation');
 
             const shot: Shot = {
                 id: id,
                 scene: `SCENE ${sceneNum.replace('S','')}`,
                 shotNumber: `${sceneNum}-${shotLetter}`,
                 description: parts[3],
-                status: 'Not Started',
+                status: status as ShotStatus,
                 complexity: parts[5].includes('EASY') ? 'EASY' : (parts[5].includes('MEDIUM') ? 'MEDIUM' : 'HARD'),
                 characters: [], // Placeholder, could be parsed from description
                 location: '', // Placeholder, would need scene-level data
                 tags: [],
                 
-                // New Enhanced Fields
                 vfxRequired: vfxRequired,
-                animationRequired: parts[3].toLowerCase().includes('animation'),
+                animationRequired: animationRequired,
                 pipelineStage: 'script',
-                prompts: [],
-                approvals: [],
+                prompts: [] as ShotPrompt[],
+                approvals: [] as DepartmentApproval[],
                 
-                // Placeholder cinematography
-                cameraAngle: 'Medium',
+                // Placeholder cinematography, can be filled by AI Director later
+                cameraAngle: parts[3].match(/wide|close-up|medium/i)?.[0].toLowerCase() || 'medium',
                 lensType: '35mm',
-                shotType: 'storyboard',
+                shotType: vfxRequired ? 'vfx' : 'storyboard',
                 cameraMovement: 'static',
                 lightingSetup: 'standard',
                 audioNotes: '',
-                complexityScore: 5,
-                estimatedCost: 0,
-                notes: '',
+                complexityScore: parts[5].includes('EASY') ? 3 : (parts[5].includes('MEDIUM') ? 5 : 8),
+                estimatedCost: 0.12,
+                notes: parts[7] || '',
             };
             shots.push(shot);
         } catch (e) {

@@ -1,17 +1,16 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Card from './Card';
-import { vfxDatabase } from '../data/vfxDatabase';
-import { productionCalendar } from '../data/productionCalendar';
-import { FestivalEntry, Shot } from '../types';
+import { FestivalEntry, Task, TaskPriority, TaskStatus } from '../types';
 import { generatePressKitContent } from '../services/geminiService';
 
 interface ProductionOfficeProps {
-  shots: Shot[];
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
-const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
-  const [activeTab, setActiveTab] = useState<'budget' | 'calendar' | 'festivals' | 'presskit'>('budget');
+const ProductionOffice: React.FC<ProductionOfficeProps> = ({ tasks, setTasks }) => {
+  const [activeTab, setActiveTab] = useState<'calendar' | 'festivals' | 'presskit'>('calendar');
   const [festivals, setFestivals] = useState<FestivalEntry[]>(() => {
     const saved = localStorage.getItem('festivals');
     return saved ? JSON.parse(saved) : [
@@ -21,26 +20,50 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
   });
   const [pressKitContent, setPressKitContent] = useState('');
   const [isPressKitLoading, setIsPressKitLoading] = useState(false);
+
+  // Task management state
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'All'>('All');
+  const [filterPriority, setFilterPriority] = useState<TaskPriority | 'All'>('All');
+  const [sortKey, setSortKey] = useState<'dueDate' | 'priority'>('dueDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   useEffect(() => {
     localStorage.setItem('festivals', JSON.stringify(festivals));
   }, [festivals]);
 
-  const budgetStats = useMemo(() => {
-    const totalVFXBudget = vfxDatabase.reduce((sum, shot) => {
-        const budgetValue = parseInt(shot.budget.replace('$', ''));
-        return sum + (isNaN(budgetValue) ? 0 : budgetValue);
-    }, 4900); // Start with base from docs as parser is simple
-    const completedShots = shots.filter(s => s.status === 'Video Complete').length;
-    const estimatedApiCost = completedShots * 0.15; // Rough estimate
-    return { totalVFXBudget, estimatedApiCost };
-  }, [shots]);
+  const priorityOrder: Record<TaskPriority, number> = {
+    'Critical': 4,
+    'High': 3,
+    'Medium': 2,
+    'Low': 1,
+  };
 
-  const calendarTasks = useMemo(() => {
-      return productionCalendar.split('\n').filter(line => line.startsWith('- [ ]') || line.startsWith('- [x]'));
-  }, []);
-  
-  const handleGenerateEPK = useCallback(async () => {
+  const sortedAndFilteredTasks = useMemo(() => {
+    return tasks
+      .filter(task => filterStatus === 'All' || task.status === filterStatus)
+      .filter(task => filterPriority === 'All' || task.priority === filterPriority)
+      .sort((a, b) => {
+        let comparison = 0;
+        if (sortKey === 'dueDate') {
+          comparison = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        } else { // priority
+          comparison = priorityOrder[b.priority] - priorityOrder[a.priority];
+        }
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+  }, [tasks, filterStatus, filterPriority, sortKey, sortDirection]);
+
+  const toggleTaskStatus = (taskId: number) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === taskId
+          ? { ...task, status: task.status === 'Complete' ? 'Incomplete' : 'Complete' }
+          : task
+      )
+    );
+  };
+
+  const handleGenerateEPK = async () => {
     setIsPressKitLoading(true);
     setPressKitContent('');
     try {
@@ -55,7 +78,7 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
     } finally {
         setIsPressKitLoading(false);
     }
-  }, []);
+  };
 
   const handleDownloadEPK = () => {
     const blob = new Blob([pressKitContent], { type: 'text/markdown' });
@@ -69,6 +92,13 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
     URL.revokeObjectURL(url);
   };
 
+  const priorityColors: Record<TaskPriority, string> = {
+    Critical: 'border-vanguard-red',
+    High: 'border-vanguard-orange',
+    Medium: 'border-vanguard-yellow',
+    Low: 'border-vanguard-accent',
+  };
+
   return (
     <div className="space-y-8 h-full flex flex-col">
       <div>
@@ -77,33 +107,48 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
       </div>
 
       <div className="flex border-b border-vanguard-bg-tertiary">
-        <button onClick={() => setActiveTab('budget')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'budget' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Budget Tracker</button>
-        <button onClick={() => setActiveTab('calendar')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'calendar' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Production Calendar</button>
+        <button onClick={() => setActiveTab('calendar')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'calendar' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Production Tasks</button>
         <button onClick={() => setActiveTab('festivals')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'festivals' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Festival Tracker</button>
         <button onClick={() => setActiveTab('presskit')} className={`py-2 px-4 text-sm font-semibold ${activeTab === 'presskit' ? 'text-vanguard-accent border-b-2 border-vanguard-accent' : 'text-vanguard-text-secondary'}`}>Press Kit</button>
       </div>
 
-      {activeTab === 'budget' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card title="VFX Budget Overview">
-            <p className="text-4xl font-bold text-vanguard-accent">${budgetStats.totalVFXBudget.toLocaleString()}</p>
-            <p className="text-vanguard-text-secondary">Total Planned VFX Spend</p>
-          </Card>
-          <Card title="Estimated API Costs">
-            <p className="text-4xl font-bold text-vanguard-accent">${budgetStats.estimatedApiCost.toFixed(2)}</p>
-            <p className="text-vanguard-text-secondary">Based on completed video shots. (Est. $0.15/shot)</p>
-          </Card>
-        </div>
-      )}
-
       {activeTab === 'calendar' && (
-        <Card title="Interactive Production Calendar" className="flex-1 flex flex-col">
+        <Card title="Production Task Manager" className="flex-1 flex flex-col">
+          <div className="p-4 flex flex-wrap items-center gap-4 border-b border-vanguard-bg-tertiary">
+            {/* Filtering Controls */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm">Status:</label>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="bg-vanguard-bg-tertiary p-2 rounded-md text-sm">
+                <option>All</option><option>Incomplete</option><option>Complete</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm">Priority:</label>
+              <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as any)} className="bg-vanguard-bg-tertiary p-2 rounded-md text-sm">
+                <option>All</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+              </select>
+            </div>
+            {/* Sorting Controls */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm">Sort by:</label>
+              <select value={sortKey} onChange={e => setSortKey(e.target.value as any)} className="bg-vanguard-bg-tertiary p-2 rounded-md text-sm">
+                <option value="dueDate">Due Date</option><option value="priority">Priority</option>
+              </select>
+              <select value={sortDirection} onChange={e => setSortDirection(e.target.value as any)} className="bg-vanguard-bg-tertiary p-2 rounded-md text-sm">
+                <option value="asc">Asc</option><option value="desc">Desc</option>
+              </select>
+            </div>
+          </div>
           <div className="overflow-y-auto pr-2">
-            <ul className="space-y-2">
-              {calendarTasks.map((task, i) => (
-                <li key={i} className="flex items-center space-x-3 p-2 bg-vanguard-bg-tertiary rounded-md">
-                  <input type="checkbox" checked={task.startsWith('- [x]')} readOnly className="form-checkbox h-5 w-5 bg-vanguard-bg border-vanguard-bg-tertiary text-vanguard-accent" />
-                  <span className="text-sm">{task.substring(6)}</span>
+            <ul className="space-y-2 p-4">
+              {sortedAndFilteredTasks.map((task) => (
+                <li key={task.id} className={`flex items-center space-x-3 p-3 bg-vanguard-bg-tertiary rounded-md border-l-4 ${priorityColors[task.priority]} transition-all duration-300 ${task.status === 'Complete' ? 'opacity-50' : ''}`}>
+                  <input type="checkbox" checked={task.status === 'Complete'} onChange={() => toggleTaskStatus(task.id)} className="form-checkbox h-5 w-5 bg-vanguard-bg border-vanguard-bg-tertiary text-vanguard-accent rounded focus:ring-vanguard-accent" />
+                  <div className="flex-1">
+                    <p className={`text-sm ${task.status === 'Complete' ? 'line-through' : ''}`}>{task.description}</p>
+                    <p className="text-xs text-vanguard-text-secondary">{task.dueDate}</p>
+                  </div>
+                   <span className={`text-xs font-bold px-2 py-1 rounded-full ${Object.values(priorityColors).find(c => c.includes(priorityColors[task.priority].split('-')[2]))?.replace('border-', 'bg-').replace('/20', '')}/20`}>{task.priority}</span>
                 </li>
               ))}
             </ul>
@@ -113,7 +158,7 @@ const ProductionOffice: React.FC<ProductionOfficeProps> = ({ shots }) => {
 
       {activeTab === 'festivals' && (
         <Card title="Festival & Distribution Tracker" className="flex-1 flex flex-col">
-          <div className="overflow-y-auto flex-1">
+           <div className="overflow-y-auto flex-1">
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-vanguard-bg-secondary">
                 <tr>

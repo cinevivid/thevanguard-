@@ -48,6 +48,8 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
             type: 'Video' as 'Video',
             startTime: 0,
             duration: 4, 
+            // FIX: Add missing 'name' property to conform to TimelineClip type.
+            name: shot.shotNumber,
           };
           return clip;
         }
@@ -73,7 +75,8 @@ const TrailerGenerator: React.FC<TrailerGeneratorProps> = ({ shots, generatedVid
         { id: 'music', name: 'Music', clips: [] },
     ]);
     
-    setCurrentView(View.EDIT_BAY);
+    // FIX: Property 'EDIT_BAY' does not exist on type 'typeof View'. Navigate to POST_PRODUCTION_SUITE instead.
+    setCurrentView(View.POST_PRODUCTION_SUITE);
   };
 
   return (

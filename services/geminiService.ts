@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Modality, Part } from "@google/genai";
 import { screenplay } from '../data/screenplay';
 import { visualLookbook } from '../data/visualLookbook';
@@ -318,16 +317,19 @@ ${specificPrompt}
   }
 }
 
-export async function* getDailyShootList(shots: Shot[]): AsyncGenerator<string> {
+export const getDashboardData = async (shots: Shot[]): Promise<{shootList: string; directorNotes: string}> => {
     const ai = getAiClient();
-    const prompt = `You are an AI First Assistant Director. Based on the provided production calendar and the current status of all 430 shots, determine today's date (assume today is October 24, 2025 for this exercise) and generate a "Daily Shoot List". 
+    const prompt = `You are an AI production assistant. Analyze the provided production data and generate a "Daily Shoot List" and "AI Director's Notes" in a single JSON object.
+
+    **CONTEXT:**
+    - Today's Date (for this exercise): October 24, 2025
+    - Production Calendar: Details the schedule.
+    - Shot Status: A JSON array of all 430 shots and their current production status.
 
     **INSTRUCTIONS:**
-    1.  Find the current date in the production calendar.
-    2.  Identify the scenes scheduled for this week.
-    3.  Look at the current status of shots in those scenes.
-    4.  Create a prioritized list of the next 3-5 UNCOMPLETED shots to work on today.
-    5.  Present this as a friendly, motivational daily briefing. Be specific.
+    1.  **For 'shootList':** Determine the current date's tasks from the calendar. Identify the next 3-5 uncompleted shots in the scheduled scenes. Format this as a friendly, motivational markdown briefing.
+    2.  **For 'directorNotes':** Analyze the overall production progress. Identify potential issues (e.g., bottlenecks, consistency risks). Provide one or two proactive, insightful notes as markdown.
+    3.  **Output:** Return a single, valid JSON object with two keys: "shootList" and "directorNotes". Do not add any other text or markdown formatting around the JSON.
 
     ---
     **PRODUCTION CALENDAR:**
@@ -339,46 +341,21 @@ export async function* getDailyShootList(shots: Shot[]): AsyncGenerator<string> 
     `;
 
     try {
-        const response = await ai.models.generateContentStream({
+        const response = await ai.models.generateContent({
           model: "gemini-2.5-pro",
           contents: [{ parts: [{ text: prompt }] }],
         });
-        for await (const chunk of response) {
-            yield chunk.text;
+        const text = response.text.trim().replace(/```json|```/g, '');
+        return JSON.parse(text);
+    } catch (error: any) {
+        console.error("Error generating dashboard data:", error);
+        if (error.message && (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED'))) {
+             throw new Error("API quota exceeded for Gemini 2.5 Pro. This may be a daily or per-minute limit. Please wait and try again, or check your billing details.");
         }
-    } catch (error) {
-        console.error("Error generating daily shoot list:", error);
-        yield "Could not generate today's shoot list. Please check the console.";
+        throw new Error("Could not generate dashboard data. Please check the console.");
     }
 }
 
-export async function* getAIDirectorNotes(shots: Shot[]): AsyncGenerator<string> {
-    const ai = getAiClient();
-    const prompt = `You are the AI Director for "THE VANGUARD". Analyze the current production progress and provide one or two proactive, insightful notes.
-
-    **INSTRUCTIONS:**
-    1. Review the overall completion percentage.
-    2. Identify which scenes are complete vs. in-progress.
-    3. Look for potential issues (e.g., many shots generated but not locked, a character appearing in many recent shots).
-    4. Synthesize your findings into a helpful, high-level suggestion, like a real director would. Example ideas: suggest a 'consistency check' on a character, recommend moving to VFX planning for a completed scene, or note that a major milestone is approaching.
-    5. Be creative and insightful. Format as markdown.
-
-    ---
-    **CURRENT SHOT STATUS (JSON):**
-    ${JSON.stringify(shots.map(s => ({id: s.id, scene: s.scene, status: s.status})))}
-    ---
-    `;
-
-    try {
-        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
-        for await (const chunk of response) {
-            yield chunk.text;
-        }
-    } catch (error) {
-        console.error("Error generating AI director notes:", error);
-        yield "Could not generate director's notes. Please check the console.";
-    }
-}
 
 export const generateMoodboardImages = async (prompt: string): Promise<string[]> => {
     const ai = getAiClient();
@@ -614,34 +591,6 @@ export async function* generateTrailerCutlist(): AsyncGenerator<string> {
   }
 }
 
-// FIX: Export 'runProductionAudit' to make it available for import in other components.
-export async function* runProductionAudit(shots: Shot[]): AsyncGenerator<string> {
-  const ai = getAiClient();
-  const prompt = `You are an AI Executive Producer. Analyze the entire shot database for "THE VANGUARD" and provide a high-level audit report.
-
-  **INSTRUCTIONS:**
-  1.  Review the status of all shots.
-  2.  Identify critical production blockers (e.g., hero sequences not started, entire acts with no locked storyboards).
-  3.  Flag inconsistencies (e.g., a shot marked "Video Complete" but its preceding shot is "Not Started").
-  4.  Check for missing resources (e.g., shots requiring VFX that don't have a VFX prompt).
-  5.  Provide a prioritized list of 3-5 critical issues that need immediate attention. Format as professional, actionable markdown.
-
-  ---
-  **SHOT DATABASE (JSON):**
-  ${JSON.stringify(shots, null, 2)}
-  ---
-  `;
-
-   try {
-    const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
-    for await (const chunk of response) {
-        yield chunk.text;
-    }
-  } catch (error) {
-    console.error("Error running production audit:", error);
-    yield "### Error: Could not run production audit.";
-  }
-}
 
 export const getEmotionalArcData = async (character: string): Promise<EmotionalArcPoint[]> => {
   const ai = getAiClient();
@@ -665,7 +614,7 @@ export const getEmotionalArcData = async (character: string): Promise<EmotionalA
   
   try {
     const response = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
-    const text = response.text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, '');
+    const text = response.text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, '').replace(/```json|```/g, '');
     return JSON.parse(text);
   } catch (error) {
     console.error("Error fetching emotional arc data:", error);
@@ -694,7 +643,7 @@ export const getPacingData = async (): Promise<PacingPoint[]> => {
   `;
   try {
     const response = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
-    const text = response.text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, '');
+    const text = response.text.trim().replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, '').replace(/```json|```/g, '');
     return JSON.parse(text);
   } catch (error) {
     console.error("Error fetching pacing data:", error);
@@ -702,7 +651,6 @@ export const getPacingData = async (): Promise<PacingPoint[]> => {
   }
 };
 
-// FIX: Export 'analyzeShotComposition' to make it available for import in other components.
 export async function* analyzeShotComposition(shot: Shot, imageBase64: string): AsyncGenerator<string> {
     const ai = getAiClient();
     const prompt = `You are an expert Director of Photography like Roger Deakins. Your task is to analyze a generated storyboard image for the film "THE VANGUARD" based on the project's official documentation.
@@ -746,4 +694,155 @@ export async function* analyzeShotComposition(shot: Shot, imageBase64: string): 
         console.error("Error analyzing shot composition:", error);
         yield "### AI Error: Could not analyze shot composition.";
     }
+}
+
+export async function* runProductionAudit(shots: Shot[]): AsyncGenerator<string> {
+  const ai = getAiClient();
+  const prompt = `You are an AI Executive Producer. Analyze the entire shot database for "THE VANGUARD" and provide a high-level audit report.
+
+  **INSTRUCTIONS:**
+  1.  Review the status of all shots.
+  2.  Identify critical production blockers (e.g., hero sequences not started, entire acts with no locked storyboards, shots stuck in 'Pending Approval' for too long).
+  3.  Flag inconsistencies (e.g., a shot marked "Video Complete" but its preceding shot is "Not Started").
+  4.  Check for missing resources (e.g., shots requiring VFX that don't have a VFX prompt).
+  5.  Provide a prioritized list of 3-5 critical issues that need immediate attention. Format as professional, actionable markdown.
+
+  ---
+  **SHOT DATABASE (JSON):**
+  ${JSON.stringify(shots.map(s => ({id: s.id, status: s.status, vfxRequired: s.vfxRequired, prompts: s.prompts.length})), null, 2)}
+  ---
+  `;
+
+   try {
+    const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+    for await (const chunk of response) {
+        yield chunk.text;
+    }
+  } catch (error) {
+    console.error("Error running production audit:", error);
+    yield "### Error: Could not run production audit.";
+  }
+}
+
+export async function* verifyContinuity(shot1: {shot: Shot, imageBase64: string}, shot2: {shot: Shot, imageBase64: string}): AsyncGenerator<string> {
+  const ai = getAiClient();
+  const prompt = `You are an expert Continuity Supervisor for a major film. Your task is to analyze two sequential storyboard images for continuity errors.
+
+  **CONTEXT:**
+  ---
+  **VISUAL LOOKBOOK:**
+  ${visualLookbook}
+  ---
+  **SHOT 1 DETAILS:**
+  - **ID:** ${shot1.shot.id}
+  - **Description:** ${shot1.shot.description}
+
+  **SHOT 2 DETAILS:**
+  - **ID:** ${shot2.shot.id}
+  - **Description:** ${shot2.shot.description}
+  ---
+
+  **INSTRUCTIONS:**
+  1.  The first image is Shot 1. The second image is Shot 2. They are sequential.
+  2.  **Critically analyze** both images for any inconsistencies.
+  3.  Provide a detailed, bulleted list of your findings. Cover these categories:
+      *   **Costume & Wardrobe:** Is the clothing identical? Any added or missing items?
+      *   **Props:** Are all props present/absent correctly? Have they moved without reason?
+      *   **Hair & Makeup:** Is the hair style identical? Any changes to makeup?
+      *   **Lighting:** Is the direction and color of the light consistent between the shots?
+      *   **Set Dressing:** Has anything in the background changed, appeared, or disappeared?
+  4.  If a continuity error is found, state its severity (e.g., 'Minor', 'Noticeable', 'Critical') and suggest a fix.
+  5.  If there are no errors, state "Continuity is clear."
+  `;
+  
+  const contents = { parts: [
+    { text: prompt }, 
+    { inlineData: { mimeType: 'image/png', data: shot1.imageBase64 } },
+    { inlineData: { mimeType: 'image/png', data: shot2.imageBase64 } },
+  ]};
+
+  try {
+    const response = await ai.models.generateContentStream({
+        model: "gemini-2.5-pro",
+        contents,
+    });
+
+    for await (const chunk of response) {
+        yield chunk.text;
+    }
+  } catch (error) {
+    console.error("Error running continuity verification:", error);
+    yield "### AI Error: Could not run continuity verification.";
+  }
+}
+
+// NEW EXPERT FEATURES
+export async function* generateLightingDiagram(sceneDescription: string): AsyncGenerator<string> {
+    const ai = getAiClient();
+    const prompt = `You are an AI Gaffer and Director of Photography. Based on the Visual Lookbook and a scene description, generate a simple, text-based lighting diagram and a prompt fragment for Midjourney.
+
+    **CONTEXT:**
+    ---
+    **VISUAL LOOKBOOK:**
+    ${visualLookbook}
+    ---
+    **SCENE DESCRIPTION:**
+    ${sceneDescription}
+    ---
+    
+    **INSTRUCTIONS:**
+    1. Analyze the lookbook for the lighting style of the described scene/location.
+    2. Create a simple top-down text diagram using characters like [K] for Key, [F] for Fill, [B] for Backlight, and [C] for Camera.
+    3. Write a short Midjourney prompt fragment describing the lighting setup.
+    4. Format as markdown.
+    `;
+    try {
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+        for await (const chunk of response) { yield chunk.text; }
+    } catch (e) { yield "### AI Error: Could not generate lighting diagram."; }
+}
+
+export async function* suggestLensPackage(shotDescription: string): AsyncGenerator<string> {
+    const ai = getAiClient();
+    const prompt = `You are an AI Camera Assistant. Based on a shot description and standard cinematography principles, recommend a lens package (e.g., 24mm, 50mm, 85mm) and camera movement. Justify your choices.
+    
+    **SHOT DESCRIPTION:**
+    ${shotDescription}
+    ---
+    `;
+    try {
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: prompt }] }] });
+        for await (const chunk of response) { yield chunk.text; }
+    } catch (e) { yield "### AI Error: Could not suggest lens package."; }
+}
+
+export const generatePropConcept = async (description: string): Promise<string[]> => {
+  const ai = getAiClient();
+  const fullPrompt = `Generate a cinematic concept art image of a sci-fi prop. Style should be grounded, realistic, and consistent with a Blade Runner 2049 aesthetic. Prop description: "${description}"`;
+  const contents = { parts: [{ text: fullPrompt }] };
+  const generateSingleImage = async () => {
+    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash-image', contents, config: { responseModalities: [Modality.IMAGE] } });
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) return part.inlineData.data;
+    }
+    throw new Error("No image data found in response");
+  };
+  try {
+    return await Promise.all(Array(4).fill(0).map(() => generateSingleImage()));
+  } catch (error) {
+    console.error("Error generating prop concepts:", error);
+    return [];
+  }
+};
+
+export async function* generateAmbientAudio(prompt: string): AsyncGenerator<string> {
+    const ai = getAiClient();
+    const fullPrompt = `You are an AI Sound Designer. Generate a 60-second seamless loop of an ambient soundscape based on the following description: "${prompt}". Provide the output as a base64 encoded WAV file.
+    
+    **For this simulation, describe the soundscape in detail instead of generating audio.** Include layers, specific sounds, and overall mood.
+    `;
+    try {
+        const response = await ai.models.generateContentStream({ model: "gemini-2.5-pro", contents: [{ parts: [{ text: fullPrompt }] }] });
+        for await (const chunk of response) { yield chunk.text; }
+    } catch (e) { yield "### AI Error: Could not generate ambient audio description."; }
 }

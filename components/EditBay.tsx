@@ -55,6 +55,8 @@ const EditBay: React.FC<EditBayProps> = ({ shots, generatedVideos, audioUrls, ti
           type: 'Video',
           startTime: track.clips.reduce((max, c) => Math.max(max, c.startTime + c.duration), 0),
           duration: 4, // Assume 4s for now
+          // FIX: Add missing 'name' property to conform to TimelineClip type.
+          name: shot.shotNumber,
         };
         return { ...track, clips: [...track.clips, newClip] };
       }
@@ -72,7 +74,7 @@ const EditBay: React.FC<EditBayProps> = ({ shots, generatedVideos, audioUrls, ti
         const audioUrl = URL.createObjectURL(audioBlob);
         
         const videoTrack = timeline.find(t => t.id === 'video');
-        const correspondingVideo = videoTrack?.clips.find(c => c.shot.id === shot.id);
+        const correspondingVideo = videoTrack?.clips.find(c => c.shot?.id === shot.id);
 
         const newClip: TimelineClip = {
           id: `foley-${shot.id}-${Date.now()}`,
@@ -81,6 +83,8 @@ const EditBay: React.FC<EditBayProps> = ({ shots, generatedVideos, audioUrls, ti
           type: 'SFX',
           startTime: correspondingVideo?.startTime || 0,
           duration: 2,
+          // FIX: Add missing 'name' property to conform to TimelineClip type.
+          name: `Foley: ${shot.shotNumber}`,
         };
 
         setTimeline(prev => prev.map(track => track.id === 'sfx' ? { ...track, clips: [...track.clips, newClip] } : track));
@@ -99,7 +103,7 @@ const EditBay: React.FC<EditBayProps> = ({ shots, generatedVideos, audioUrls, ti
     
     timeline.find(t => t.id === 'video')?.clips.forEach((clip, index) => {
       const eventNum = (index + 1).toString().padStart(3, '0');
-      const clipName = clip.shot.id;
+      const clipName = clip.shot?.id;
       const startTc = new Date(timecodeOut * 1000 / 30).toISOString().substr(11, 11).replace('.', ':');
       const endTc = new Date((timecodeOut + clip.duration * 30) * 1000 / 30).toISOString().substr(11, 11).replace('.', ':');
       
@@ -135,7 +139,7 @@ const EditBay: React.FC<EditBayProps> = ({ shots, generatedVideos, audioUrls, ti
             <div className="overflow-y-auto pr-2 space-y-2">
                 {clipsForScene.map(shot => (
                     <div key={shot.id} className="p-2 rounded-md bg-vanguard-bg-tertiary flex items-center space-x-3">
-                        <video src={generatedVideos[shot.id]} className="w-20 h-11 object-cover rounded-sm bg-vanguard-bg" muted loop/>
+                        <video src={generatedVideos[shot.id]} className="w-20 h-11 object-cover rounded-sm bg-vanguard-bg" muted loop autoPlay />
                         <div className="flex-1"><p className="font-semibold text-sm">{shot.shotNumber}</p></div>
                         <button onClick={() => handleAddToTimeline(shot)} className="text-2xl hover:text-vanguard-accent" title="Add video to timeline">+</button>
                     </div>
@@ -151,9 +155,9 @@ const EditBay: React.FC<EditBayProps> = ({ shots, generatedVideos, audioUrls, ti
                      <div className="relative bg-vanguard-bg-tertiary h-12 rounded-md w-full overflow-hidden">
                        {track.clips.map(clip => (
                          <div key={clip.id} className="absolute h-full bg-vanguard-accent/50 border-l-2 border-vanguard-accent p-1 group" style={{left: `${(clip.startTime / 60) * 100}%`, width: `${(clip.duration / 60) * 100}%`}}>
-                           <p className="text-xs truncate text-white">{clip.type === 'Video' ? clip.shot.shotNumber : 'SFX'}</p>
-                           {clip.type === 'Video' && (
-                             <button onClick={() => handleGenerateFoley(clip.shot)} disabled={isSfxLoading} className="absolute top-0 right-0 text-xs bg-black/50 p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100">
+                           <p className="text-xs truncate text-white">{clip.type === 'Video' ? clip.shot?.shotNumber : 'SFX'}</p>
+                           {clip.type === 'Video' && clip.shot && (
+                             <button onClick={() => handleGenerateFoley(clip.shot!)} disabled={isSfxLoading} className="absolute top-0 right-0 text-xs bg-black/50 p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100">
                                {isSfxLoading ? '...' : '🔊'}
                             </button>
                            )}

@@ -1,32 +1,24 @@
 export enum View {
-  DIRECTOR_DASHBOARD = "Director's Dashboard",
-  TOOLS_HUB = 'Tools Hub',
+  DIRECTORS_ROOM = "Director's Room",
+  WRITERS_ROOM = "Writer's Room",
+  ART_DEPT = 'Digital Art Dept.',
+  CAMERA_DEPT = 'Camera & Lighting',
+  POST_PRODUCTION_SUITE = 'Post-Production Suite',
+
+  // Standalone tools
   PRODUCTION_OFFICE = 'Production Office',
-  EMOTIONAL_ARCHITECTURE = 'Emotional Architecture',
-  VISUAL_STORYTELLING = 'Visual Storytelling',
-  PACING_RHYTHM = 'Pacing & Rhythm',
-  SCRIPT_ANALYSIS = 'Script Analysis',
-  CONTINUITY_CHECKER = 'Continuity Checker',
-  DOCUMENT_MANAGER = 'Document Manager',
   SHOT_DATABASE = 'Shot Database',
-  SCRIPT_BREAKDOWN = 'AI Script Breakdown',
-  LOOK_DEV_LAB = 'Look Dev Lab',
-  AI_CASTING_STUDIO = 'AI Casting Studio',
-  CORPUS_ASSISTANT = 'Corpus Assistant',
-  CANONICAL_ASSETS = 'Canonical Assets',
-  STORYBOARD_GENERATOR = 'Storyboard Generator',
-  SHOT_COMPOSITION_VALIDATOR = 'Shot Composition Validator',
-  VIDEO_GENERATOR = 'Video Generation',
-  AUDIO_PRODUCTION = 'Audio Production',
-  COLOR_VFX_HUB = 'Color & VFX Hub',
-  EDIT_BAY = 'Edit Bay',
+  CONTINUITY_VERIFIER = 'Continuity Verifier',
   ASSET_LIBRARY = 'Asset Library',
-  TRAILER_GENERATOR = 'Trailer Generator',
-  EMOTIONAL_ARC_VISUALIZER = 'Emotional Arc Visualizer',
-  PACING_VISUALIZER = 'Pacing Visualizer',
+  // FIX: Add PRODUCTION_AUDIT to the View enum
+  PRODUCTION_AUDIT = 'Production Audit',
+  
+  // Keep for internal routing if needed, but not in sidebar
+  TOOLS_HUB = 'Tools Hub',
 }
 
-export type ShotStatus = 'Not Started' | 'Storyboard Generated' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error';
+// FIX: Add 'Storyboard Generated' to ShotStatus type
+export type ShotStatus = 'Not Started' | 'Pending Approval' | 'Storyboard Locked' | 'Video Generating' | 'Video Complete' | 'Error' | 'Storyboard Generated';
 
 export type ShotComplexity = 'EASY' | 'MEDIUM' | 'HARD';
 export type Department = 'director' | 'cinematography' | 'vfx' | 'sound';
@@ -92,15 +84,16 @@ export interface VFXShot {
 
 export interface TimelineClip {
   id: string; 
-  shot: Shot;
+  shot?: Shot;
   url: string;
-  type: 'Video' | 'Dialogue' | 'SFX' | 'Music';
+  type: 'Video' | 'Dialogue' | 'SFX' | 'Music' | 'Ambience';
   startTime: number;
   duration: number;
+  name: string;
 }
 
 export interface TimelineTrack {
-  id: 'video' | 'dialogue' | 'sfx' | 'music';
+  id: 'video' | 'dialogue' | 'sfx' | 'music' | 'ambience';
   name: string;
   clips: TimelineClip[];
 }
@@ -122,4 +115,15 @@ export interface PacingPoint {
   scene: string;
   asl: number; // Average Shot Length
   intensity: 'Low' | 'Medium' | 'High';
+}
+
+export type TaskStatus = 'Incomplete' | 'Complete';
+export type TaskPriority = 'Critical' | 'High' | 'Medium' | 'Low';
+
+export interface Task {
+  id: number;
+  description: string;
+  dueDate: string;
+  status: TaskStatus;
+  priority: TaskPriority;
 }

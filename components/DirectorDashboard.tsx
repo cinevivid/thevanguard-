@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Shot, ShotStatus, View } from '../types';
 import Card from './Card';
-import { getDailyShootList, getAIDirectorNotes, runProductionAudit } from '../services/geminiService';
+import { getDashboardData } from '../services/geminiService';
 
 interface DirectorDashboardProps {
   shots: Shot[];
@@ -16,58 +17,23 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
   const [shootList, setShootList] = useState('');
   const [directorNotes, setDirectorNotes] = useState('');
   const [auditResult, setAuditResult] = useState('');
-  const [isLoadingShootList, setIsLoadingShootList] = useState(true);
-  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
-  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setIsLoadingShootList(true);
-      try {
-        const shootListStream = getDailyShootList(shots);
-        let fullResponse = '';
-        for await (const chunk of shootListStream) {
-          fullResponse += chunk;
-        }
-        setShootList(fullResponse);
-      } catch (e) {
-        setShootList("Error fetching shoot list.");
-      } finally {
-        setIsLoadingShootList(false);
-      }
-
-      setIsLoadingNotes(true);
-      try {
-        const notesStream = getAIDirectorNotes(shots);
-        let fullResponse = '';
-        for await (const chunk of notesStream) {
-          fullResponse += chunk;
-        }
-        setDirectorNotes(fullResponse);
-      } catch (e) {
-        setDirectorNotes("Error fetching director notes.");
-      } finally {
-        setIsLoadingNotes(false);
-      }
-    };
-    fetchDashboardData();
-  }, [shots]);
-  
-  const handleRunAudit = async () => {
-    setIsLoadingAudit(true);
-    setAuditResult('');
-     try {
-        const auditStream = runProductionAudit(shots);
-        let fullResponse = '';
-        for await (const chunk of auditStream) {
-          fullResponse += chunk;
-        }
-        setAuditResult(fullResponse);
-      } catch (e) {
-        setAuditResult("Error running production audit.");
-      } finally {
-        setIsLoadingAudit(false);
-      }
+  const handleFetchBriefing = async () => {
+    setIsLoading(true);
+    setError(null);
+    setShootList('');
+    setDirectorNotes('');
+    try {
+      const data = await getDashboardData(shots);
+      setShootList(data.shootList);
+      setDirectorNotes(data.directorNotes);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const stats = useMemo(() => {
@@ -81,9 +47,11 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
     return { total, completed, percentage, statusCounts };
   }, [shots]);
 
+  // FIX: Changed 'Pending Review' to 'Pending Approval' to match the ShotStatus type.
   const statusColors: Record<ShotStatus, string> = {
     'Not Started': 'bg-vanguard-text-secondary',
     'Storyboard Generated': 'bg-yellow-500',
+    'Pending Approval': 'bg-vanguard-orange',
     'Storyboard Locked': 'bg-vanguard-green',
     'Video Generating': 'bg-blue-500',
     'Video Complete': 'bg-vanguard-accent',
@@ -120,31 +88,26 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ shots, setCurrent
         </div>
       </Card>
       
+      <div className="text-center">
+        <button onClick={handleFetchBriefing} disabled={isLoading} className="bg-vanguard-accent hover:bg-vanguard-accent-hover text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50">
+          {isLoading ? 'Generating Briefing...' : "✨ Get Daily Briefing & Notes"}
+        </button>
+      </div>
+
+      {error && <p className="text-center text-vanguard-red">{error}</p>}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card title="AI Daily Shoot List">
             <div className="min-h-[200px]">
-                {isLoadingShootList ? <p className="text-vanguard-text-secondary">AI First Assistant Director is preparing your tasks...</p> : <MarkdownRenderer content={shootList} />}
+                {isLoading && !shootList ? <p className="text-vanguard-text-secondary">AI First Assistant Director is preparing your tasks...</p> : shootList ? <MarkdownRenderer content={shootList} /> : <p className="text-vanguard-text-secondary">Click the button above to generate today's tasks.</p>}
             </div>
         </Card>
         <Card title="AI Director's Notes">
              <div className="min-h-[200px]">
-                {isLoadingNotes ? <p className="text-vanguard-text-secondary">AI Director is analyzing your progress...</p> : <MarkdownRenderer content={directorNotes} />}
+                {isLoading && !directorNotes ? <p className="text-vanguard-text-secondary">AI Director is analyzing your progress...</p> : directorNotes ? <MarkdownRenderer content={directorNotes} /> : <p className="text-vanguard-text-secondary">Click the button above to get AI-powered insights.</p>}
             </div>
         </Card>
       </div>
-
-      <Card title="AI Production Audit">
-        <div className="flex justify-end mb-4">
-            <button onClick={handleRunAudit} disabled={isLoadingAudit} className="bg-vanguard-accent hover:bg-vanguard-accent-hover text-white font-bold py-2 px-4 rounded-lg">
-                {isLoadingAudit ? 'Auditing...' : 'Run Full Production Audit'}
-            </button>
-        </div>
-        <div className="p-4 bg-vanguard-bg rounded-md min-h-[150px] max-h-[50vh] overflow-y-auto">
-            {isLoadingAudit && <p>AI is scanning all 430 shots for issues...</p>}
-            {!isLoadingAudit && !auditResult && <p>Click "Run Audit" to have the AI identify critical production blockers and inconsistencies.</p>}
-            {auditResult && <MarkdownRenderer content={auditResult} />}
-        </div>
-      </Card>
     </div>
   );
 };

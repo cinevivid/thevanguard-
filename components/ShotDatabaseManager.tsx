@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from './Card';
 import { Shot, ShotStatus } from '../types';
@@ -71,11 +72,14 @@ const ShotDatabaseManager: React.FC<ShotDatabaseManagerProps> = ({ shots, setSho
       case 'Video Generating': return 'bg-blue-500/20 text-blue-400';
       case 'Video Complete': return 'bg-vanguard-accent/20 text-vanguard-accent';
       case 'Error': return 'bg-vanguard-red/20 text-vanguard-red';
+      // FIX: Changed 'Pending Review' to 'Pending Approval' to match the ShotStatus type.
+      case 'Pending Approval': return 'bg-vanguard-orange/20 text-vanguard-orange';
       default: return 'bg-gray-500/20 text-gray-400';
     }
   }
 
-  const statusOptions: (ShotStatus | 'All')[] = ['All', 'Not Started', 'Storyboard Generated', 'Storyboard Locked', 'Video Generating', 'Video Complete', 'Error'];
+  // FIX: Changed 'Pending Review' to 'Pending Approval' to match the ShotStatus type.
+  const statusOptions: (ShotStatus | 'All')[] = ['All', 'Not Started', 'Storyboard Generated', 'Pending Approval', 'Storyboard Locked', 'Video Generating', 'Video Complete', 'Error'];
   const columns: (keyof Shot)[] = ['id', 'description', 'status', 'complexity', 'cameraAngle', 'vfxRequired', 'pipelineStage'];
 
   return (
